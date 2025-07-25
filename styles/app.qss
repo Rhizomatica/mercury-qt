@@ -1,0 +1,22 @@
+/* styles.qss */
+QPushButton {
+    background-color:rgb(255, 136, 0); /* Red background */
+    color: white;
+    font-size: 20px;
+    font-weight:bold;
+    border-radius: 10px;
+    padding: 10px 20px;
+}
+
+QPushButton:hover {
+    background-color:rgb(255, 160, 51);
+}
+
+QTextEdit {
+    font-size: 22px;
+}
+
+QLineEdit{
+    height: 50px;
+    font-size: 20px;
+}
