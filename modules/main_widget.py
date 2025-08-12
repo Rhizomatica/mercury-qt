@@ -1,7 +1,9 @@
 from PySide6 import QtCore, QtWidgets, QtGui
 
-import modules.udp.client as client
+import modules.connection.udp.client as client
 import modules.components.bar_chart as bar_chart
+import modules.components.scatter_chart as scatter_chart
+import modules.components.gauge_chart as gauge_chart
 
 
 class MainWidget(QtWidgets.QWidget):
@@ -21,8 +23,13 @@ class MainWidget(QtWidgets.QWidget):
         self.button = QtWidgets.QPushButton("Send message via UDP socket")
         self.layout = QtWidgets.QVBoxLayout(self)
         self.barChart = bar_chart.BarChartWidget()
-        
+        self.scatterChart = scatter_chart.ScatterChartWidget()
+        self.gaugeChart = gauge_chart.GaugeChartWidget()
+
         self.layout.addWidget(self.barChart)
+        self.layout.addWidget(self.scatterChart)
+        self.layout.addWidget(self.gaugeChart)
+
         self.layout.addWidget(self.text)
         self.layout.addWidget(self.input)
         self.layout.addWidget(self.button)
