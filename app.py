@@ -2,7 +2,6 @@ import sys
 from PySide6 import QtWidgets
 import modules.main_widget as main_widget
 import modules.test_class as test_class
-import modules.udp.client as client
 
 
 def import_styles():
@@ -15,10 +14,6 @@ def import_styles():
         
         
 if __name__ == "__main__":
-
-    #start UDP listener
-    client = client.ClientUDP()
-    client.start_udp_client()
     
     #start mercury qt app
     app = QtWidgets.QApplication([])
