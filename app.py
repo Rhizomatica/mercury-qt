@@ -15,7 +15,6 @@ def import_styles():
         
 if __name__ == "__main__":
     
-    #start mercury qt app
     app = QtWidgets.QApplication([])
     
     styles = import_styles()
@@ -23,7 +22,7 @@ if __name__ == "__main__":
 
     widget = main_widget.MainWidget()
     
-    widget.setWindowTitle("Mercury Qt by Rhizomatica Communications") # Set window title
+    widget.setWindowTitle("Mercury Qt")
     widget.resize(800, 480)
     widget.show()
     
