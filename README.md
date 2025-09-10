@@ -1,14 +1,16 @@
-# Python UDP Communication with Qt GUI
+### README.md
 
-This project demonstrates a simple Python application that utilizes **UDP** for network communication and provides a graphical user interface (**GUI**) built with Qt for Python (**PySide6**).
+# Python UDP Communication with Qt GUI for Mercury
+
+This project provides a Python application with a **Qt GUI** (**PySide6**) for interacting with the **Mercury** software. It uses **UDP** for network communication, allowing users to send and receive messages from the Mercury system.
 
 -----
 
 ## Features
 
-  * **UDP Communication**: Sends and receives UDP datagrams.
-  * **Qt GUI**: Provides an intuitive graphical interface for interacting with the UDP communication.
-  * **Python 3**: Developed using Python 3.
+  * **UDP Communication**: Sends and receives UDP datagrams to and from Mercury.
+  * **Qt GUI**: Provides an intuitive graphical interface for interacting with the Mercury software.
+  * **Python 3**: Developed using Python 3.8 or newer.
 
 -----
 
@@ -25,11 +27,11 @@ Before you begin, ensure you have the following installed on your system:
 
 Follow these steps to set up and install the project dependencies:
 
-1.  **Install Python 3.8 (if not already installed)**:
-    If you are on a Linux system that supports Snap, you can install Python 3.8 using the following command:
+1.  **Clone the Repository**:
 
     ```bash
-    sudo snap install python38
+    git clone https://github.com/Rhizomatica/mercury.git
+    cd mercury
     ```
 
 2.  **Create and Activate a Virtual Environment**:
@@ -53,12 +55,10 @@ Follow these steps to set up and install the project dependencies:
 
 ## Configuration
 
-This project assumes default UDP host and port settings. If you need to modify these (e.g., the listening port or the target address for sending messages), you will typically find these parameters defined within the `app.py` file.
+This project assumes default UDP host and port settings, which are typically defined in `app.py`. If you need to modify these, such as the listening port or the target address, please refer to the `app.py` file.
 
-  * **Listening Port**: The port on which the application listens for incoming UDP messages.
-  * **Target Host/Port**: The IP address and port to which the application sends UDP messages.
-
-Please refer to the `app.py` file for specific configuration variables.
+  * **Listening Port**: The port on which the application listens for incoming UDP messages from Mercury.
+  * **Target Host/Port**: The IP address and port to which the application sends UDP messages to Mercury.
 
 -----
 
@@ -78,13 +78,7 @@ Once you have completed the installation and configuration steps, you can run th
     python3 app.py
     ```
 
-3.  **Run the UDP `server.py`** (located in `modules/udp`):
-
-    ```bash
-    python3 modules/udp/server.py
-    ```
-
-This command will launch the Qt GUI application.
+This command will launch the Qt GUI application, ready to communicate with Mercury.
 
 -----
 
@@ -92,7 +86,7 @@ This command will launch the Qt GUI application.
 
 After running `python3 app.py`, a GUI window will appear. This application is designed to:
 
-  * **Receive UDP Messages**: It will listen for incoming UDP datagrams on a specified port (e.g., `12345`). Any received messages will be displayed within the GUI.
-  * **Send UDP Messages**: The GUI will likely provide an input field and a button to compose and send UDP messages to a target IP address and port.
+  * **Receive UDP Messages**: It will listen for incoming UDP datagrams from Mercury on a specified port (e.g., `12345`). Any received messages will be displayed within the GUI.
+  * **Send UDP Messages**: The GUI will provide an input field and a button to compose and send UDP messages to the Mercury system.
 
 **Note**: For the application to function correctly, ensure that no other process is using the same UDP port that this application is configured to listen on.
