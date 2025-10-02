@@ -3,7 +3,7 @@ import json
 from PySide6.QtNetwork import QUdpSocket, QHostAddress
 from PySide6.QtCore import QObject, Slot, QByteArray, Signal
 
-# Run server > ./ui_communication 127.0.0.1 10000 9999
+# Run server > from HERMES-MODEM ./ui_communication 127.0.0.1 10000 9999
 
 class ClientUDP(QObject):
     json_received = Signal(dict) 
