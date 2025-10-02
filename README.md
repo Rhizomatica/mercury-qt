@@ -31,7 +31,7 @@ Follow these steps to set up and install the project dependencies:
 
     ```bash
     git clone https://github.com/Rhizomatica/mercury.git
-    cd mercury
+    cd mercury-qt
     ```
 
 2.  **Create and Activate a Virtual Environment**:
