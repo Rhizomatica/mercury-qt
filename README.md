@@ -90,3 +90,20 @@ After running `python3 app.py`, a GUI window will appear. This application is de
   * **Send UDP Messages**: The GUI will provide an input field and a button to compose and send UDP messages to the Mercury system.
 
 **Note**: For the application to function correctly, ensure that no other process is using the same UDP port that this application is configured to listen on.
+
+
+## HERMES-MODEM
+
+To make the real connection with HERMES-MODEM clone the project from
+
+**GITHUB REPO**
+
+`https://github.com/Rhizomatica/hermes-modem/tree/main/gui_interface`
+
+
+and run 
+
+```
+ ./ui_communication 127.0.0.1 10000 9999` 
+```
+in /hermes-modem/gui_interface
