@@ -7,7 +7,7 @@ import modules.test_class as test_class
 def import_styles():
     # Load the stylesheet from an external file
     try:
-        with open("styles/app.qss", "r") as f:
+        with open("assets/styles/app.qss", "r") as f:
             return f.read()
     except FileNotFoundError:
         print("Error: app.qss not found. Styles will not be applied.")
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     widget = main_widget.MainWidget()
     
     widget.setWindowTitle("Mercury Qt")
-    widget.resize(800, 480)
+    widget.resize(720, 480)
     widget.show()
     
     tests = test_class.TestClass("HERMES")

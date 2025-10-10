@@ -1,5 +1,6 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from modules.components.status_flag import StatusFlag
+from datetime import datetime
 
 class JsonDetailView(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -11,6 +12,8 @@ class JsonDetailView(QtWidgets.QWidget):
         self.setWindowTitle("JSON Details")
 
         self.title_label = QtWidgets.QLabel("<b>Latest Status Update</b>")
+        self.title_label.setStyleSheet("color: rgb(255, 136, 0)")
+        
         self.layout.addRow(self.title_label)
         self.layout.addRow(QtWidgets.QFrame())
 
@@ -30,7 +33,7 @@ class JsonDetailView(QtWidgets.QWidget):
                     if not isinstance(self.labels.get(key), StatusFlag):
                         should_recreate = True
                         break
-                elif not isinstance(self.labels.get(key), QtWidgets.QLabel): # Default should be QLabel
+                elif not isinstance(self.labels.get(key), QtWidgets.QLabel):
                     should_recreate = True
                     break
 
@@ -57,12 +60,12 @@ class JsonDetailView(QtWidgets.QWidget):
             
             #verificar o campo type lista de radio ou placa de som disparar nova acao
 
-            key_label_widget = QtWidgets.QLabel(f"<b>{key.replace('_', ' ').capitalize()}:</b>")
+            key_label_widget = QtWidgets.QLabel(f"<b>{key.replace('_', ' ').capitalize()}</b>")
             
             value_widget = self._render_component(key, data.get(key))
             
             self.layout.addRow(key_label_widget, value_widget)
-            self.labels[key] = value_widget # Store reference to the value widget
+            self.labels[key] = value_widget
         
         self.layout.update()
 
@@ -85,7 +88,6 @@ class JsonDetailView(QtWidgets.QWidget):
 
     def _render_component(self, key: str, initial_value: any = None) -> QtWidgets.QWidget:
         
-        
         if key == "client_tcp_connected":
             client_tcp_connected_status_flag = StatusFlag()
             if initial_value is not None:
@@ -95,7 +97,6 @@ class JsonDetailView(QtWidgets.QWidget):
         elif key == "sync":
             sync_status_flag = StatusFlag()
             if initial_value is not None:
-                is_connected = str(initial_value).lower() == "true"
                 is_connected = str(initial_value).lower() == "true"
                 sync_status_flag.set_status(is_connected)
             return sync_status_flag        
