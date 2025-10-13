@@ -73,9 +73,7 @@ QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
 /* ===== Group Box ===== */
 QGroupBox {
     border: 1px solid rgb(70, 70, 70);
-    border-top-right-radius: 8px;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+    border-radius 5px;
     margin-top: 32px;
     background-color: rgb(40, 40, 40);
     font-size: 18px;
@@ -95,6 +93,8 @@ QGroupBox::title {
     font-size: 18px;
     font-weight: bold;
     margin-top: -3px;
+    
+
 }
 
 QGroupBox:hover {
