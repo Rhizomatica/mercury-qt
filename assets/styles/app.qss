@@ -40,7 +40,7 @@ QTabBar::tab:hover {
 QPushButton {
     background-color: rgb(255, 136, 0);
     color: white;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     border: none;
     border-radius: 10px;
@@ -63,7 +63,6 @@ QLineEdit, QTextEdit, QPlainTextEdit {
     border-radius: 6px;
     padding: 6px 8px;
     font-size: 18px;
-    margin-bottom: 15px;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
@@ -93,8 +92,6 @@ QGroupBox::title {
     font-size: 18px;
     font-weight: bold;
     margin-top: -3px;
-    
-
 }
 
 QGroupBox:hover {

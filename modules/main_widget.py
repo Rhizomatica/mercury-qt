@@ -1,288 +1,193 @@
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtWidgets
 from modules.radio.view.json_detail_view import JsonDetailView
 import modules.connection.udp.client as Client_UDP
 
+
 class MainWidget(QtWidgets.QWidget):
+    """Main application widget for Mercury QT Client."""
+
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Mercury Qt - Like")
-        self.setGeometry(100, 100, 900, 600)
-        
-        # Dados atuais
-        self.current_status = {}
-        self.soundcards = []
-        self.selected_soundcard = ""
-        self.radios = []
-        self.selected_radio = ""
 
-        # Configurar cliente UDP
+        # State
+        self.soundcards: list[str] = []
+        self.selected_soundcard: str = ""
+        self.radios: list[str] = []
+        self.selected_radio: str = ""
+
+        # UDP Client setup
         self.client = Client_UDP.ClientUDP()
         self.client.json_received.connect(self.handle_json_data)
+        self.client.json_received.connect(self.update_detail_view)
         self.client.start_udp_client()
 
-        self.setup_ui()
+        self._setup_ui()
+        self._connect_signals()
 
-    def setup_ui(self):
+    # -------------------------------
+    # UI Setup
+    # -------------------------------
+    def _setup_ui(self):
+        """Initialize UI layout and widgets."""
         main_layout = QtWidgets.QHBoxLayout(self)
-    
-        # Coluna esquerda - Status principal
-        left_column = QtWidgets.QVBoxLayout()
-        
-        # Grupo de controle
-        control_group = QtWidgets.QGroupBox("Controle")
-        control_layout = QtWidgets.QVBoxLayout()
-        self.btn_settings = QtWidgets.QPushButton("CONFIGURAÇÕES")
-        control_layout.addWidget(self.btn_settings)
-        control_group.setLayout(control_layout)
-        left_column.addWidget(control_group)
-        
-        # Grupo de callsigns
-        callsign_group = QtWidgets.QGroupBox("Callsigns")
-        callsign_layout = QtWidgets.QFormLayout()
-        
-        self.lbl_my_callsign = QtWidgets.QLabel("--")
-        self.lbl_dest_callsign = QtWidgets.QLabel("--")
-        
-        callsign_layout.addRow("Meu Callsign:", self.lbl_my_callsign)
-        callsign_layout.addRow("Callsign Destino:", self.lbl_dest_callsign)
-        
-        callsign_group.setLayout(callsign_layout)
-        left_column.addWidget(callsign_group)
-        
-        
-        # Grupo de status da conexão
-        status_group = QtWidgets.QGroupBox("Status da Conexão")
-        status_layout = QtWidgets.QGridLayout()
-        
-        # Labels de status
-        self.lbl_bitrate = QtWidgets.QLabel("Bitrate: --")
-        self.lbl_snr = QtWidgets.QLabel("SNR: -- dB")
-        self.lbl_sync = QtWidgets.QLabel("Sincronismo: NÃO")
-        self.lbl_direction = QtWidgets.QLabel("Direção: --")
-        self.lbl_connected = QtWidgets.QLabel("TCP Conectado: NÃO")
-        
-        status_layout.addWidget(QtWidgets.QLabel("Taxa:"), 0, 0)
-        status_layout.addWidget(self.lbl_bitrate, 0, 1)
-        status_layout.addWidget(QtWidgets.QLabel("Sinal:"), 1, 0)
-        status_layout.addWidget(self.lbl_snr, 1, 1)
-        status_layout.addWidget(QtWidgets.QLabel("Sync:"), 2, 0)
-        status_layout.addWidget(self.lbl_sync, 2, 1)
-        status_layout.addWidget(QtWidgets.QLabel("Modo:"), 3, 0)
-        status_layout.addWidget(self.lbl_direction, 3, 1)
-        status_layout.addWidget(QtWidgets.QLabel("TCP:"), 4, 0)
-        status_layout.addWidget(self.lbl_connected, 4, 1)
-        
-        status_group.setLayout(status_layout)
-        left_column.addWidget(status_group)
-        
- 
-        
-        # Grupo de contadores
-        counter_group = QtWidgets.QGroupBox("Contadores")
-        counter_layout = QtWidgets.QFormLayout()
-        
-        self.lbl_tx_bytes = QtWidgets.QLabel("0")
-        self.lbl_rx_bytes = QtWidgets.QLabel("0")
-        
-        counter_layout.addRow("Bytes Transmitidos:", self.lbl_tx_bytes)
-        counter_layout.addRow("Bytes Recebidos:", self.lbl_rx_bytes)
-        
-        counter_group.setLayout(counter_layout)
-        left_column.addWidget(counter_group)
-        
-        # Coluna direita - Controles e informações
-        right_column = QtWidgets.QVBoxLayout()
-        
-        # Grupo de dispositivos
-        devices_group = QtWidgets.QGroupBox("Dispositivos")
-        devices_layout = QtWidgets.QVBoxLayout()
-        
-        # Soundcard
-        soundcard_group = QtWidgets.QGroupBox("Soundcard")
-        soundcard_layout = QtWidgets.QVBoxLayout()
-        self.combo_soundcard = QtWidgets.QComboBox()
-        soundcard_layout.addWidget(self.combo_soundcard)
-        soundcard_group.setLayout(soundcard_layout)
-        
-        # Rádio
-        radio_group = QtWidgets.QGroupBox("Rádio")
-        radio_layout = QtWidgets.QVBoxLayout()
-        self.combo_radio = QtWidgets.QComboBox()
-        radio_layout.addWidget(self.combo_radio)
-        radio_group.setLayout(radio_layout)
-        
-        devices_layout.addWidget(soundcard_group)
-        devices_layout.addWidget(radio_group)
-        devices_group.setLayout(devices_layout)
-        right_column.addWidget(devices_group)
-        
- 
-        
-        # # Área de log (opcional)
-        # log_group = QtWidgets.QGroupBox("Log")
-        # log_layout = QtWidgets.QVBoxLayout()
-        # self.text_log = QtWidgets.QTextEdit()
-        # self.text_log.setMaximumHeight(150)
-        # self.text_log.setReadOnly(True)
-        # log_layout.addWidget(self.text_log)
-        # log_group.setLayout(log_layout)
-        # right_column.addWidget(log_group)
-        
-        # Adicionar colunas ao layout principal
-        main_layout.addLayout(left_column, 2)
-        main_layout.addLayout(right_column, 1)
-        
-        # Configurar estilos
-        #self.setup_styles()
 
-    #def setup_styles(self):
-        # Estilos 
-        # self.setStyleSheet("""
-        #     QGroupBox {
-        #         font-weight: bold;
-        #         border: 1px solid gray;
-        #         border-radius: 5px;
-        #         margin-top: 1ex;
-        #         padding-top: 10px;
-        #     }
-            
-        #     QGroupBox::title {
-        #         subcontrol-origin: margin;
-        #         left: 10px;
-        #         padding: 0 5px 0 5px;
-        #     }
-            
-        #     QLabel {
-        #         font-family: "Courier New", monospace;
-        #     }
-            
-        #     QPushButton {
-        #         font-weight: bold;
-        #         padding: 5px;
-        #         min-height: 20px;
-        #     }
-            
-        #     QPushButton:hover {
-        #         background-color: #e0e0e0;
-        #     }
-            
-        #     QTextEdit {
-        #         font-family: "Courier New", monospace;
-        #         font-size: 10px;
-        #     }
-        # """)
-    def load_styles(self):
-        """Carrega os estilos do arquivo QSS"""
-        try:
-            # Ajuste o caminho conforme a estrutura do seu projeto
-            styles_path = os.path.join(os.path.dirname(__file__), "styles", "app.qss")
-            
-            with open(styles_path, "r", encoding="utf-8") as file:
-                stylesheet = file.read()
-                self.setStyleSheet(stylesheet)
-                
-        except FileNotFoundError:
-            print(f"Arquivo de estilos não encontrado: {styles_path}")
-        except Exception as e:
-            print(f"Erro ao carregar estilos: {e}")
+        # --- Left column ---
+        left_column = QtWidgets.QVBoxLayout()
+        left_column.addWidget(self._build_status_group())
+        left_column.addWidget(self._build_control_group())
+
+        # --- Right column ---
+        right_column = QtWidgets.QVBoxLayout()
+        right_column.addWidget(self._build_devices_group())
+
+        # --- Final layout ---
+        main_layout.addLayout(left_column, 1)
+        main_layout.addLayout(right_column, 1)
+
+    def _build_status_group(self) -> QtWidgets.QGroupBox:
+        """Create group box for connection status / JSON view."""
+        group = QtWidgets.QGroupBox("Dados da Conexão")
+        layout = QtWidgets.QGridLayout()
+
+        self.json_detail_view = JsonDetailView()
+        self.json_detail_view.update_json_data({"message": "Waiting for UDP data..."})
+        layout.addWidget(self.json_detail_view)
+
+        group.setLayout(layout)
+        return group
+
+    def _build_control_group(self) -> QtWidgets.QGroupBox:
+        """Create radio control buttons group."""
+        group = QtWidgets.QGroupBox("Controle")
+        layout = QtWidgets.QVBoxLayout()
+
+        self.btn_usb = QtWidgets.QPushButton("USB")
+        self.btn_lsb = QtWidgets.QPushButton("LSB")
+
+        layout.addWidget(self.btn_usb)
+        layout.addWidget(self.btn_lsb)
+
+        group.setLayout(layout)
+        return group
+
+    def _build_devices_group(self) -> QtWidgets.QGroupBox:
+        """Create form for devices and command input."""
+        group = QtWidgets.QGroupBox("Dispositivos")
+        form = QtWidgets.QFormLayout()
+
+        self.combo_soundcard = QtWidgets.QComboBox()
+        self.combo_soundcard.setMinimumWidth(200)
+
+        self.combo_radio = QtWidgets.QComboBox()
+        self.combo_radio.setMinimumWidth(200)
+        self.combo_radio.addItem("Waiting for radios...")
+        self.combo_radio.setEnabled(False)
+
+        self.input_command = QtWidgets.QLineEdit("SEND COMMAND")
+        self.input_target = QtWidgets.QLineEdit("101")
+        self.input_value = QtWidgets.QLineEdit("25.0")
+
+        self.btn_send = QtWidgets.QPushButton("Send Command")
+
+        form.addRow("Soundcard:", self.combo_soundcard)
+        form.addRow("Radio:", self.combo_radio)
+        form.addRow("Command:", self.input_command)
+        form.addRow("Target ID:", self.input_target)
+        form.addRow("Value:", self.input_value)
+        form.addRow("", self.btn_send)
+
+        group.setLayout(form)
+        return group
+
+    # -------------------------------
+    # Signal Connections
+    # -------------------------------
+    def _connect_signals(self):
+        """Connects UI events to logic."""
+        self.btn_send.clicked.connect(self._on_send_command)
+        self.btn_usb.clicked.connect(lambda: self._send_mode_command("USB"))
+        self.btn_lsb.clicked.connect(lambda: self._send_mode_command("LSB"))
+        self.combo_soundcard.currentTextChanged.connect(self._on_soundcard_changed)
+        self.combo_radio.currentTextChanged.connect(self._on_radio_changed)
+
+    # -------------------------------
+    # Event Handlers
+    # -------------------------------
     @QtCore.Slot(dict)
     def handle_json_data(self, data: dict):
-        """Processa os dados JSON recebidos"""
-        msg_type = data.get("type", "")
-        
-        if msg_type == "status":
-            self.handle_status_data(data)
-        elif msg_type == "soundcard_list":
-            self.handle_soundcard_data(data)
-        elif msg_type == "radio_list":
-            self.handle_radio_data(data)
-        
-        # # Adiciona ao log
-        # self.add_to_log(f"Recebido: {msg_type}")
+        """Process received JSON messages."""
+        msg_type = data.get("type")
 
-    def handle_status_data(self, data):
-        """Atualiza os dados de status"""
-        self.current_status = data
-        
-        # Atualizar interface
-        self.lbl_bitrate.setText(f"{data.get('bitrate', '--')} bps")
-        
-        snr = data.get('snr', 0)
-        self.lbl_snr.setText(f"{snr:.1f} dB")
-        
-        sync = data.get('sync', False)
-        self.lbl_sync.setText("SIM" if sync else "NÃO")
-        
-        direction = data.get('direction', '')
-        direction_text = "TRANSMITINDO" if direction == 'tx' else "RECEBENDO" if direction == 'rx' else "IDLE"
-        self.lbl_direction.setText(direction_text)
-        
-        connected = data.get('client_tcp_connected', False)
-        self.lbl_connected.setText("SIM" if connected else "NÃO")
-        
-        self.lbl_my_callsign.setText(data.get('user_callsign', '--'))
-        self.lbl_dest_callsign.setText(data.get('dest_callsign', '--'))
-        
-        self.lbl_tx_bytes.setText(str(data.get('bytes_transmitted', 0)))
-        self.lbl_rx_bytes.setText(str(data.get('bytes_received', 0)))
-        
-        # Mudar cores baseado no estado
-        self.update_status_colors(direction, sync)
+        handlers = {
+            "soundcard_list": self.handle_soundcard_data,
+            "radio_list": self.handle_radio_data,
+            # "status": self.handle_status_data, # for future extension
+        }
 
-    def handle_soundcard_data(self, data):
-        """Atualiza lista de soundcards"""
-        self.soundcards = data.get('list', [])
-        self.selected_soundcard = data.get('selected', '')
-        
+        handler = handlers.get(msg_type)
+        if handler:
+            handler(data)
+        else:
+            print(f"Unknown message type: {msg_type}")
+
+    @QtCore.Slot(dict)
+    def update_detail_view(self, data: dict):
+        """Update JSON details viewer."""
+        self.json_detail_view.update_json_data(data)
+
+    # -------------------------------
+    # Data Handlers
+    # -------------------------------
+    def handle_soundcard_data(self, data: dict):
+        """Update soundcard list in UI."""
+        self.soundcards = data.get("list", [])
+        self.selected_soundcard = data.get("selected", "")
+
+        self.combo_soundcard.blockSignals(True)
         self.combo_soundcard.clear()
         self.combo_soundcard.addItems(self.soundcards)
-        
-        # Selecionar o item atual
         if self.selected_soundcard in self.soundcards:
             index = self.soundcards.index(self.selected_soundcard)
             self.combo_soundcard.setCurrentIndex(index)
+        self.combo_soundcard.blockSignals(False)
 
-    def handle_radio_data(self, data):
-        """Atualiza lista de rádios"""
-        self.radios = data.get('list', [])
-        self.selected_radio = data.get('selected', '')
-        
+    def handle_radio_data(self, data: dict):
+        """Update radio list in UI."""
+        self.radios = data.get("list", [])
+        self.selected_radio = data.get("selected", "")
+
+        self.combo_radio.blockSignals(True)
         self.combo_radio.clear()
         self.combo_radio.addItems(self.radios)
-        
-        # Selecionar o item atual
         if self.selected_radio in self.radios:
             index = self.radios.index(self.selected_radio)
             self.combo_radio.setCurrentIndex(index)
+        self.combo_radio.setEnabled(bool(self.radios))
+        self.combo_radio.blockSignals(False)
 
-    def update_status_colors(self, direction, sync):
-        """Atualiza cores baseado no estado atual"""
-        # Reset cores
-        self.lbl_direction.setStyleSheet("")
-        self.lbl_sync.setStyleSheet("")
-        
-        if direction == 'tx':
-            self.lbl_direction.setStyleSheet("color: red; font-weight: bold;")
-        elif direction == 'rx':
-            self.lbl_direction.setStyleSheet("color: green; font-weight: bold;")
-        
-        if sync:
-            self.lbl_sync.setStyleSheet("color: blue; font-weight: bold;")
-    
-    # def add_to_log(self, message):
-    #     """Adiciona mensagem ao log"""
-    #     timestamp = QtCore.QDateTime.currentDateTime().toString("hh:mm:ss")
-    #     self.text_log.append(f"[{timestamp}] {message}")
-        
-    #     # Limitar o tamanho do log
-    #     if self.text_log.document().lineCount() > 100:
-    #         cursor = self.text_log.textCursor()
-    #         cursor.movePosition(QtGui.QTextCursor.Start)
-    #         cursor.select(QtGui.QTextCursor.BlockUnderCursor)
-    #         cursor.removeSelectedText()
+    # -------------------------------
+    # UI Event Logic
+    # -------------------------------
+    def _on_send_command(self):
+        """Send a command to the UDP client."""
+        command = self.input_command.text()
+        target = self.input_target.text()
+        value = self.input_value.text()
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    widget = MainWidget()
-    widget.show()
-    sys.exit(app.exec())
+        msg = {"command": command, "target": target, "value": value}
+        print(f"Sending command: {msg}")  # replace with actual UDP send
+        self.client.send_json(msg)
+
+    def _on_soundcard_changed(self, value: str):
+        self.selected_soundcard = value
+        print(f"Selected soundcard: {value}")
+
+    def _on_radio_changed(self, value: str):
+        self.selected_radio = value
+        print(f"Selected radio: {value}")
+
+    def _send_mode_command(self, mode: str):
+        """Example action for USB/LSB buttons."""
+        msg = {"command": "set_mode", "mode": mode}
+        print(f"Sending mode command: {msg}")
+        self.client.send_json(msg)

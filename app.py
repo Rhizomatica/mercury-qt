@@ -13,13 +13,13 @@ def import_styles():
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
-    
+        
     styles = import_styles()
     app.setStyleSheet(styles)
 
     widget = main_widget.MainWidget()
     widget.setWindowTitle("Mercury Qt - Interface")
-    widget.resize(800, 600)
+    widget.resize(720, 480)
     widget.show()
     
     # Iniciar testes se necessário
