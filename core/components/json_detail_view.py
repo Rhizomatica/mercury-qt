@@ -1,6 +1,5 @@
 from PySide6 import QtWidgets, QtCore, QtGui
-from modules.components.status_flag import StatusFlag
-from datetime import datetime
+from core.components.status_flag import StatusFlag
 
 class JsonDetailView(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -58,8 +57,6 @@ class JsonDetailView(QtWidgets.QWidget):
             if key == "message" and "type" not in data:
                 continue 
             
-            #verificar o campo type lista de radio ou placa de som disparar nova acao
-
             key_label_widget = QtWidgets.QLabel(f"<b>{key.replace('_', ' ').capitalize()}</b>")
             
             value_widget = self._render_component(key, data.get(key))
