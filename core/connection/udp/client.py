@@ -6,12 +6,17 @@ from PySide6.QtCore import QObject, Slot, QByteArray, Signal
 class ClientUDP(QObject):
     json_received = Signal(dict) 
 
-    def __init__(self, parent=None):
+    # Default ports matching the Mercury V2 backend:
+    DEFAULT_RECEIVE_PORT = 10000   # UI listens here (backend TX port)
+    DEFAULT_SEND_PORT    = 10001    # UI sends here  (backend RX port)
+    DEFAULT_HOST         = '0.0.0.0'
+
+    def __init__(self, host=None, receive_port=None, send_port=None, parent=None):
         super().__init__(parent)
         print("Create a UDP socket (IPv4, UDP)")
-        self.HOST = '127.0.0.1'
-        self.RECEIVE_PORT = 10000  # Client will listen on this port
-        self.SERVER_SEND_PORT = 9999 # Server sends to this port
+        self.HOST = host or self.DEFAULT_HOST
+        self.RECEIVE_PORT = receive_port or self.DEFAULT_RECEIVE_PORT
+        self.SERVER_SEND_PORT = send_port or self.DEFAULT_SEND_PORT
         self.udp_socket = QUdpSocket(self)
 
         # Bind the UDP socket to the client's receive port
