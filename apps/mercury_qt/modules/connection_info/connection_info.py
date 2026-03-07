@@ -12,5 +12,8 @@ class ConnectionInfo(QtWidgets.QWidget):
 
     @QtCore.Slot(dict)
     def handle_connection_info(self, data: dict):
-        self.json_detail.update_json_data(data)
+        # Remove SNR and Sync from connection info — both shown in the waterfall section
+        exclude = {"snr", "sync"}
+        filtered_data = {k: v for k, v in data.items() if k.lower() not in exclude}
+        self.json_detail.update_json_data(filtered_data)
         return self.connection_group

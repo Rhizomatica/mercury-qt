@@ -16,7 +16,7 @@ class MercuryQT():
 
         widget = Main()
         widget.setWindowTitle("Mercury Qt - Interface")
-        widget.resize(720, 480)
+        widget.resize(960, 640)
         widget.show()
 
         sys.exit(mercury_app.exec())

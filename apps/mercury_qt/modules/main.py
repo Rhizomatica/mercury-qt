@@ -1,5 +1,6 @@
 from PySide6 import QtCore, QtWidgets
 from .connection_info.connection_info import ConnectionInfo
+from .waterfall.waterfall_display import WaterfallDisplay
 from apps.mercury_qt.modules.controls.controls import Controls 
 
 import core.connection.udp.client as Client_UDP
@@ -11,17 +12,23 @@ class Main(QtWidgets.QWidget):
         super().__init__()
         
         self.connection_info = ConnectionInfo()
-        self.app_controls_view = Controls() 
+        self.app_controls_view = Controls()
+        self.waterfall_display = WaterfallDisplay()
+        self._waterfall_live = False  # switches to live UDP mode on first backend status
 
         self.main_layout = QtWidgets.QHBoxLayout(self)
         self.left_column = QtWidgets.QVBoxLayout()
         self.right_column = QtWidgets.QVBoxLayout()
 
-        self.left_column.addWidget(self._build_radio_status_group())
+        # Left: waterfall (top, large) + connection info (bottom, compact)
+        self.left_column.addWidget(self.waterfall_display, stretch=3)
+        self.left_column.addWidget(self._build_radio_status_group(), stretch=1)
+
+        # Right: controls
         self.right_column.addWidget(self._build_controls_group())
 
         # --- Final layout ---
-        self.main_layout.addLayout(self.left_column, 1)
+        self.main_layout.addLayout(self.left_column, 2)
         self.main_layout.addLayout(self.right_column, 1)
         
         self.start_udp_service()
@@ -36,7 +43,8 @@ class Main(QtWidgets.QWidget):
         
     def start_udp_service(self):
         self.client = Client_UDP.ClientUDP()
-        self.client.json_received.connect(self.handle_json_data)        
+        self.client.json_received.connect(self.handle_json_data)
+        self.client.connection_lost.connect(self._handle_connection_lost)
         self.client.start_udp_client()
         
     @QtCore.Slot(dict)
@@ -47,7 +55,7 @@ class Main(QtWidgets.QWidget):
         handlers = {
             "soundcard_list": self.handle_soundcard_data,
             "radio_list": self.handle_radio_data,
-            "status": self.connection_info.handle_connection_info,
+            "status": self._handle_status_data,
         }
 
         handler = handlers.get(msg_type)
@@ -63,6 +71,29 @@ class Main(QtWidgets.QWidget):
     def handle_radio_data(self, data: dict):
         radios = data.get("list", [])
         self.app_controls_view.get_radio_control().set_options(radios)
+
+    def _handle_status_data(self, data: dict):
+        self._last_status_data = data
+        self.connection_info.handle_connection_info(data)
+        self.waterfall_display.handle_status(data)
+        # Auto-switch to live spectrum when backend is online
+        if not hasattr(self, '_waterfall_live') or not self._waterfall_live:
+            self.waterfall_display.set_demo_mode(False)
+            self._waterfall_live = True
+
+    @QtCore.Slot()
+    def _handle_connection_lost(self):
+        """Called 3 s after the last UDP packet — backend is gone."""
+        last = getattr(self, '_last_status_data', {})
+        # Build a reset dict with the same keys but cleared status values
+        reset_data = {k: v for k, v in last.items()}
+        reset_data['client_tcp_connected'] = False
+        reset_data['user_callsign'] = ''
+        reset_data['dest_callsign'] = ''
+        self.connection_info.handle_connection_info(reset_data)
+        # Reset waterfall overlay
+        self.waterfall_display.handle_status({'snr': 0.0, 'sync': False})
+        self._waterfall_live = False
 
     def _connect_signals(self):        
         # CONEXÃO DO SINAL CUSTOMIZADO: Conecta o sinal 'command_to_send' ao handler de envio

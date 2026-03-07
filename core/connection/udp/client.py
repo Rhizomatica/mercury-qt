@@ -1,15 +1,18 @@
 import sys
 import json
 from PySide6.QtNetwork import QUdpSocket, QHostAddress
-from PySide6.QtCore import QObject, Slot, QByteArray, Signal
+from PySide6.QtCore import QObject, Slot, QByteArray, Signal, QTimer
 
 class ClientUDP(QObject):
-    json_received = Signal(dict) 
+    json_received = Signal(dict)
+    connection_lost = Signal()   # emitted after INACTIVITY_MS with no data
 
     # Default ports matching the Mercury V2 backend:
     DEFAULT_RECEIVE_PORT = 10000   # UI listens here (backend TX port)
     DEFAULT_SEND_PORT    = 10001    # UI sends here  (backend RX port)
     DEFAULT_HOST         = '0.0.0.0'
+
+    INACTIVITY_MS = 2000  # declare connection lost after 2s silence
 
     def __init__(self, host=None, receive_port=None, send_port=None, parent=None):
         super().__init__(parent)
@@ -18,6 +21,18 @@ class ClientUDP(QObject):
         self.RECEIVE_PORT = receive_port or self.DEFAULT_RECEIVE_PORT
         self.SERVER_SEND_PORT = send_port or self.DEFAULT_SEND_PORT
         self.udp_socket = QUdpSocket(self)
+
+        # Source locking: once the first Mercury process sends a packet its IP
+        # is recorded here and all packets from other IPs are discarded.
+        # Reset to None when the inactivity timer fires so the UI can accept
+        # a fresh process after the previous one disconnects.
+        self._locked_host: str | None = None
+
+        # Inactivity watchdog
+        self._inactivity_timer = QTimer(self)
+        self._inactivity_timer.setSingleShot(True)
+        self._inactivity_timer.setInterval(self.INACTIVITY_MS)
+        self._inactivity_timer.timeout.connect(self._on_inactivity_timeout)
 
         # Bind the UDP socket to the client's receive port
         if not self.udp_socket.bind(QHostAddress(self.HOST), self.RECEIVE_PORT):
@@ -29,13 +44,34 @@ class ClientUDP(QObject):
         print(f"UDP Client listening on {self.HOST}:{self.RECEIVE_PORT}")
 
     @Slot()
+    def _on_inactivity_timeout(self):
+        """Inactivity watchdog fired — release source lock and signal connection lost."""
+        print(f"Connection lost from {self._locked_host} (inactivity timeout)")
+        self._locked_host = None
+        self.connection_lost.emit()
+
+    @Slot()
     def read_pending_datagrams(self):
         while self.udp_socket.hasPendingDatagrams():
             datagram, host, port = self.udp_socket.readDatagram(self.udp_socket.pendingDatagramSize())
+            sender_ip = host.toString()
+
+            # --- Source locking: only accept packets from the first Mercury process ---
+            if self._locked_host is None:
+                # First packet received — lock onto this sender
+                self._locked_host = sender_ip
+                print(f"Locked onto Mercury process at {sender_ip}:{port}")
+            elif sender_ip != self._locked_host:
+                # Packet from a different Mercury process — discard it
+                print(f"Discarding packet from {sender_ip}:{port} (locked to {self._locked_host})")
+                continue
+
             message = datagram.data().decode('utf-8')
-            print(f"Received from server {host.toString()}:{port}:{message}")
+            print(f"Received from server {sender_ip}:{port}:{message}")
             try:
                 json_data = json.loads(message)
+                # Reset inactivity watchdog on every received packet
+                self._inactivity_timer.start()
                 self.json_received.emit(json_data)
             except json.JSONDecodeError as e:
                 print(f"Error decoding JSON: {e}")
