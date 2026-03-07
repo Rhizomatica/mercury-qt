@@ -3,8 +3,6 @@ import json
 from PySide6.QtNetwork import QUdpSocket, QHostAddress
 from PySide6.QtCore import QObject, Slot, QByteArray, Signal
 
-# Run server > from HERMES-MODEM ./ui_communication 127.0.0.1 10000 9999
-
 class ClientUDP(QObject):
     json_received = Signal(dict) 
 
@@ -30,10 +28,9 @@ class ClientUDP(QObject):
         while self.udp_socket.hasPendingDatagrams():
             datagram, host, port = self.udp_socket.readDatagram(self.udp_socket.pendingDatagramSize())
             message = datagram.data().decode('utf-8')
-            print(f"Received from server {host.toString()}:{port}: '{message}'")
+            print(f"Received from server {host.toString()}:{port}:{message}")
             try:
                 json_data = json.loads(message)
-                print(f"Parsed JSON data: {json_data}")
                 self.json_received.emit(json_data)
             except json.JSONDecodeError as e:
                 print(f"Error decoding JSON: {e}")
@@ -47,11 +44,25 @@ class ClientUDP(QObject):
         ping_message = "Ping Mercury UDP server..."
         self.send_message(ping_message)
 
+    def send_json(self, data: dict):
+        """Serializa o dicionário para JSON e envia como mensagem."""
+        try:
+            message = json.dumps(data)
+            self.send_message(message)
+        except TypeError as e:
+            print(f"Error serializing data to JSON: {e}")
+            print(f"Data was: {data}")
+            
     def send_message(self, message: str):
-        print(f"Sending message: '{message}'")
+        """Envia uma string bruta como datagrama UDP."""
+        # print(f"Sending message: '{message}'")
         data = QByteArray(message.encode('utf-8'))
+        
+        # NOTE: A documentação do PySide6/Qt sugere que o writeDatagram deve usar
+        # o QHostAddress e a porta do destinatário.
         bytes_sent = self.udp_socket.writeDatagram(data, QHostAddress(self.HOST), self.SERVER_SEND_PORT)
+        
         if bytes_sent == -1:
             print(f"Error sending message: {self.udp_socket.errorString()}")
-        else:
-            print(f"Sent {bytes_sent} bytes.")
+        # else:
+            # print(f"Sent {bytes_sent} bytes.")

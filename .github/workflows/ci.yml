@@ -1,0 +1,57 @@
+name: Build and Publish Artifact
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Create virtual environment
+        run: |
+          python -m venv env
+          source env/bin/activate
+          pip install --upgrade pip
+
+      - name: Install dependencies
+        run: |
+          source env/bin/activate
+          pip install -r requirements.txt
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist/mercury-qt
+          cp app.py dist/mercury-qt/
+          cp README.md dist/mercury-qt/
+          cp requirements.txt dist/mercury-qt/
+          cp -r apps dist/mercury-qt/
+          cp -r core dist/mercury-qt/
+
+          cat << EOF > dist/mercury-qt/run.sh
+          #!/bin/bash
+          python3 -m venv env
+          source env/bin/activate
+          pip install -r requirements.txt
+          python app.py mercury
+          EOF
+
+          chmod +x dist/mercury-qt/run.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercury-qt
+          path: dist/mercury-qt

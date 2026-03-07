@@ -84,7 +84,11 @@ This command will launch the Qt GUI application, ready to communicate with Mercu
 
 ## Example Usage
 
-After running `python3 app.py`, a GUI window will appear. This application is designed to:
+After running `python3 app.py [app_name]` 
+
+eg. `python3 app.py mercury` , 
+
+a GUI window will appear. This application is designed to:
 
   * **Receive UDP Messages**: It will listen for incoming UDP datagrams from Mercury on a specified port (e.g., `12345`). Any received messages will be displayed within the GUI.
   * **Send UDP Messages**: The GUI will provide an input field and a button to compose and send UDP messages to the Mercury system.
@@ -98,12 +102,12 @@ To make the real connection with HERMES-MODEM clone the project from
 
 **GITHUB REPO**
 
-`https://github.com/Rhizomatica/hermes-modem/tree/main/gui_interface`
+`https://github.com/Rhizomatica/hermes-modem`
 
 
 and run 
 
 ```
- ./ui_communication 127.0.0.1 10000 9999` 
+ ./ui_communication 127.0.0.1 10000 9999
 ```
 in /hermes-modem/gui_interface

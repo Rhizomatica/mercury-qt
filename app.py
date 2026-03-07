@@ -1,34 +1,18 @@
 import sys
-from PySide6 import QtWidgets
-import modules.main_widget as main_widget
-import modules.test_class as test_class
+import apps.mercury_qt.app as mercury_qt
+import core.test_class as test_class
 
 
-def import_styles():
-    # Load the stylesheet from an external file
-    try:
-        with open("styles/app.qss", "r") as f:
-            return f.read()
-    except FileNotFoundError:
-        print("Error: app.qss not found. Styles will not be applied.")
-        
-        
 if __name__ == "__main__":
     
-    app = QtWidgets.QApplication([])
-    
-    styles = import_styles()
-    app.setStyleSheet(styles)
+    if len(sys.argv) > 1:
+        app = sys.argv[1]
+    else:
+        print('Missing param app')
+        sys.exit(1)
 
-    widget = main_widget.MainWidget()
-    
-    widget.setWindowTitle("Mercury Qt")
-    widget.resize(800, 480)
-    widget.show()
-    
-    tests = test_class.TestClass("HERMES")
-    tests.start_mercury_qt_app()
-
-    sys.exit(app.exec())
-
-
+    if app == "mercury":
+        mercury_qt.MercuryQT()
+    else:
+        tests = test_class.TestClass("HERMES")
+        tests.start_mercury_qt_app()
