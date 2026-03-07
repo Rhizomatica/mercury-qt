@@ -1,7 +1,7 @@
 from PySide6 import QtWidgets, QtCore
 from core.components.json_detail_view import JsonDetailView
 
-class Connection_info(QtWidgets.QWidget):
+class ConnectionInfo(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.json_detail = JsonDetailView()

@@ -14,7 +14,7 @@ class ComboBox(QtWidgets.QWidget):
         self.combo_box = QtWidgets.QComboBox()
         
         # Conecta o sinal nativo do QComboBox ao novo SLOT interno
-        self.combo_box.activated.connect(self._on_text_changed) 
+        self.combo_box.currentTextChanged.connect(self._on_text_changed)
         
         # Layout (apenas para este exemplo simplificado)
         layout = QtWidgets.QHBoxLayout(self)

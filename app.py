@@ -13,6 +13,6 @@ if __name__ == "__main__":
 
     if app == "mercury":
         mercury_qt.MercuryQT()
-    
-    tests = test_class.TestClass("HERMES")
-    tests.start_mercury_qt_app()
+    else:
+        tests = test_class.TestClass("HERMES")
+        tests.start_mercury_qt_app()

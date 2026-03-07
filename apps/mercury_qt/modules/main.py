@@ -1,5 +1,5 @@
 from PySide6 import QtCore, QtWidgets
-from .connection_info.connection_info import Connection_info
+from .connection_info.connection_info import ConnectionInfo
 from apps.mercury_qt.modules.controls.controls import Controls 
 
 import core.connection.udp.client as Client_UDP
@@ -10,7 +10,7 @@ class Main(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         
-        self.connection_info = Connection_info()
+        self.connection_info = ConnectionInfo()
         self.app_controls_view = Controls() 
 
         self.main_layout = QtWidgets.QHBoxLayout(self)

@@ -37,6 +37,8 @@ jobs:
           cp app.py dist/mercury-qt/
           cp README.md dist/mercury-qt/
           cp requirements.txt dist/mercury-qt/
+          cp -r apps dist/mercury-qt/
+          cp -r core dist/mercury-qt/
 
           cat << EOF > dist/mercury-qt/run.sh
           #!/bin/bash
