@@ -8,12 +8,15 @@ import core.connection.udp.client as Client_UDP
 class Main(QtWidgets.QWidget):
     """Main application widget for Mercury QT Client."""
 
-    def __init__(self):
+    def __init__(self, base_port=10000):
         super().__init__()
-        
+
+        self.receive_port  = base_port
+        self.send_port     = base_port + 1
+        self.spectrum_port = base_port + 2
         self.connection_info = ConnectionInfo()
         self.app_controls_view = Controls()
-        self.waterfall_display = WaterfallDisplay()
+        self.waterfall_display = WaterfallDisplay(spectrum_port=self.spectrum_port)
         self._waterfall_live = False  # switches to live UDP mode on first backend status
 
         self.main_layout = QtWidgets.QHBoxLayout(self)
@@ -42,7 +45,7 @@ class Main(QtWidgets.QWidget):
         return self.app_controls_view
         
     def start_udp_service(self):
-        self.client = Client_UDP.ClientUDP()
+        self.client = Client_UDP.ClientUDP(receive_port=self.receive_port, send_port=self.send_port)
         self.client.json_received.connect(self.handle_json_data)
         self.client.connection_lost.connect(self._handle_connection_lost)
         self.client.start_udp_client()

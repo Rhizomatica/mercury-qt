@@ -35,7 +35,7 @@ from PySide6.QtNetwork import QUdpSocket, QHostAddress
 
 SPECTRUM_MAGIC = 0x4D435259
 SPECTRUM_HEADER = struct.Struct("<IHH")   # magic, fft_size, sample_rate
-SPECTRUM_UDP_PORT = 10002                 # default port for spectrum data
+SPECTRUM_UDP_PORT = 10002                 # BASE_PORT + 2  (default spectrum port)
 
 
 class SpectrumProvider(QObject):

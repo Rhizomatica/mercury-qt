@@ -7,9 +7,10 @@ class ClientUDP(QObject):
     json_received = Signal(dict)
     connection_lost = Signal()   # emitted after INACTIVITY_MS with no data
 
-    # Default ports matching the Mercury V2 backend:
-    DEFAULT_RECEIVE_PORT = 10000   # UI listens here (backend TX port)
-    DEFAULT_SEND_PORT    = 10001    # UI sends here  (backend RX port)
+    # Default ports — derived from BASE_PORT (10000):
+    DEFAULT_BASE_PORT    = 10000
+    DEFAULT_RECEIVE_PORT = DEFAULT_BASE_PORT      # RECEIVE_PORT = BASE_PORT      (UI listens, backend TX)
+    DEFAULT_SEND_PORT    = DEFAULT_BASE_PORT + 1  # SEND_PORT    = BASE_PORT + 1  (UI sends,   backend RX)
     DEFAULT_HOST         = '0.0.0.0'
 
     INACTIVITY_MS = 2000  # declare connection lost after 2s silence

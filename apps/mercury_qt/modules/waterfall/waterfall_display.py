@@ -17,7 +17,7 @@ import numpy as np
 class WaterfallDisplay(QtWidgets.QWidget):
     """Self-contained waterfall display panel."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, spectrum_port: int | None = None):
         super().__init__(parent)
 
         # ---- Waterfall widget ----
@@ -28,12 +28,15 @@ class WaterfallDisplay(QtWidgets.QWidget):
         )
 
         # ---- Spectrum data source ----
-        self.provider = SpectrumProvider(
-            self,
+        provider_kwargs = dict(
             demo_mode=True,     # start in demo mode; switch when backend connects
             fft_size=512,
             sample_rate=8000,
         )
+        if spectrum_port is not None:
+            provider_kwargs["udp_port"] = spectrum_port
+
+        self.provider = SpectrumProvider(self, **provider_kwargs)
         self.provider.spectrum_ready.connect(self._on_spectrum)
 
         # ---- Layout inside a GroupBox ----
