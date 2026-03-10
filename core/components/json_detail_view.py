@@ -1,14 +1,34 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from core.components.status_flag import StatusFlag
 
-# Keys that should be rendered together on a single row.
-# Each tuple is (key_left, key_right). The combined row label is defined in PAIRED_LABELS.
-PAIRED_FIELDS = [
-    ("user_callsign", "dest_callsign"),
-]
-PAIRED_LABELS = {
-    ("user_callsign", "dest_callsign"): "Callsigns",
+# Human-readable labels for specific JSON keys.
+FIELD_LABELS = {
+    "user_callsign": "User Callsign",
+    "dest_callsign": "Dest Callsign",
+    "client_tcp_connected": "Client TCP Connected",
+    "snr": "SNR",
 }
+
+# No paired fields — each key rendered on its own row.
+PAIRED_FIELDS: list = []
+PAIRED_LABELS: dict = {}
+
+# Preferred display order. Keys not listed here appear after in original order.
+FIELD_ORDER = [
+    "type",
+    "bitrate",
+    "snr",
+    "sync",
+    "direction",
+    "user_callsign",
+    "dest_callsign",
+    "client_tcp_connected",
+    "bytes_transmitted",
+    "bytes_received",
+]
+
+# Keys whose values should be displayed in uppercase.
+UPPERCASE_VALUES = {"direction"}
 
 class JsonDetailView(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -65,7 +85,11 @@ class JsonDetailView(QtWidgets.QWidget):
         # Keys already rendered as part of a paired row — skip on individual pass
         paired_rendered: set = set()
 
-        for key in data.keys():
+        # Use FIELD_ORDER for controlled ordering; append unknown keys at the end.
+        ordered_keys = [k for k in FIELD_ORDER if k in data] + \
+                       [k for k in data.keys() if k not in FIELD_ORDER]
+
+        for key in ordered_keys:
             if key == "message" and "type" not in data:
                 continue
             if key in paired_rendered:
@@ -107,7 +131,8 @@ class JsonDetailView(QtWidgets.QWidget):
                 paired_rendered.add(key_b)
                 continue
 
-            key_label_widget = QtWidgets.QLabel(f"<b>{key.upper() if key.lower() == 'snr' else key.replace('_', ' ').capitalize()}</b>")
+            label_text = FIELD_LABELS.get(key, key.replace('_', ' ').capitalize())
+            key_label_widget = QtWidgets.QLabel(f"<b>{label_text}</b>")
             value_widget = self._render_component(key, data.get(key))
             self.layout.addRow(key_label_widget, value_widget)
             self.labels[key] = value_widget
@@ -147,7 +172,9 @@ class JsonDetailView(QtWidgets.QWidget):
             return sync_status_flag        
         else:
             # Default to QLabel for all other fields
-            label = QtWidgets.QLabel(str(initial_value) if initial_value is not None else "N/A")
+            display = str(initial_value).upper() if key in UPPERCASE_VALUES and initial_value is not None else \
+                      (str(initial_value) if initial_value is not None else "N/A")
+            label = QtWidgets.QLabel(display)
             return label
 
     def _update_component_value(self, key: str, widget: QtWidgets.QWidget, value: any):
@@ -167,6 +194,8 @@ class JsonDetailView(QtWidgets.QWidget):
                 
         else:
             if isinstance(widget, QtWidgets.QLabel):
-                widget.setText(str(value) if value is not None else "N/A")
+                display = str(value).upper() if key in UPPERCASE_VALUES and value is not None else \
+                          (str(value) if value is not None else "N/A")
+                widget.setText(display)
             else:
                 print(f"Warning: Cannot update unknown widget type {type(widget)} for key '{key}'")

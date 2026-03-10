@@ -4,12 +4,13 @@ class StatusFlag(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._color = QtGui.QColor("lightgray")
-        self.setFixedSize(120, 25)
+        self.setMinimumWidth(90)
+        self.setFixedHeight(30)
         self.setToolTip("Client TCP Connected: N/A")
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_Hover)
 
         main_layout = QtWidgets.QHBoxLayout(self)
-        main_layout.setContentsMargins(14, 2, 0, 0)
+        main_layout.setContentsMargins(14, 0, 4, 0)
         main_layout.setSpacing(5)
 
         self.circle_widget = CircleIndicator(self)

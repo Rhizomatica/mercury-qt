@@ -1,17 +1,15 @@
 """
 Waterfall Display module for the Mercury QT application.
 
-Wraps the WaterfallWidget and SpectrumProvider into a QGroupBox
-with the same visual style as other Mercury QT panels (ConnectionInfo,
-Controls, etc.).  Provides start/stop and demo-mode toggling.
+Wraps the WaterfallWidget and SpectrumProvider into a QGroupBox.
+Shows a live waterfall when a spectrum UDP port is provided, otherwise
+displays a blank (black) screen.
 """
 
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtCore import Slot
 from core.components.waterfall_widget import WaterfallWidget
 from core.components.spectrum_provider import SpectrumProvider
-
-import numpy as np
 
 
 class WaterfallDisplay(QtWidgets.QWidget):
@@ -27,16 +25,8 @@ class WaterfallDisplay(QtWidgets.QWidget):
             history_lines=350,
         )
 
-        # ---- Spectrum data source ----
-        provider_kwargs = dict(
-            demo_mode=True,     # start in demo mode; switch when backend connects
-            fft_size=512,
-            sample_rate=8000,
-        )
-        if spectrum_port is not None:
-            provider_kwargs["udp_port"] = spectrum_port
-
-        self.provider = SpectrumProvider(self, **provider_kwargs)
+        # ---- Spectrum data source — live UDP only, no demo ----
+        self.provider = SpectrumProvider(self, udp_port=spectrum_port)
         self.provider.spectrum_ready.connect(self._on_spectrum)
 
         # ---- Layout inside a GroupBox ----
@@ -51,8 +41,7 @@ class WaterfallDisplay(QtWidgets.QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(self.group_box)
 
-        # Auto-start the provider
-        self.provider.start()
+        self._active = False
 
     # ------------------------------------------------------------------
     #  Slots
@@ -65,7 +54,7 @@ class WaterfallDisplay(QtWidgets.QWidget):
 
     @Slot(dict)
     def handle_status(self, data: dict):
-        """Update waterfall overlay from modem status messages."""
+        """Update SNR and sync overlay from modem status messages."""
         snr = data.get("snr")
         if snr is not None:
             self.waterfall.set_snr(float(snr))
@@ -73,5 +62,10 @@ class WaterfallDisplay(QtWidgets.QWidget):
         if sync is not None:
             self.waterfall.set_sync(bool(sync))
 
-    def set_demo_mode(self, enabled: bool):
-        self.provider.set_demo_mode(enabled)
+    def set_active(self, enabled: bool):
+        """Start or stop the spectrum UDP receiver."""
+        self._active = enabled
+        if enabled:
+            self.provider.start()
+        else:
+            self.provider.stop()

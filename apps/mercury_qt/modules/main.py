@@ -17,13 +17,15 @@ class Main(QtWidgets.QWidget):
         self.connection_info = ConnectionInfo()
         self.app_controls_view = Controls()
         self.waterfall_display = WaterfallDisplay(spectrum_port=self.spectrum_port)
-        self._waterfall_live = False  # switches to live UDP mode on first backend status
+        self.waterfall_display.setVisible(False)   # shown only when backend has waterfall enabled
+        self._waterfall_configured = False          # set once on first status message
+        self._waterfall_on = False                  # mirrors the backend waterfall flag
 
         self.main_layout = QtWidgets.QHBoxLayout(self)
         self.left_column = QtWidgets.QVBoxLayout()
         self.right_column = QtWidgets.QVBoxLayout()
 
-        # Left: waterfall (top, large) + connection info (bottom, compact)
+        # Left: waterfall (shown only when enabled) + connection info
         self.left_column.addWidget(self.waterfall_display, stretch=3)
         self.left_column.addWidget(self._build_radio_status_group(), stretch=1)
 
@@ -77,12 +79,29 @@ class Main(QtWidgets.QWidget):
 
     def _handle_status_data(self, data: dict):
         self._last_status_data = data
-        self.connection_info.handle_connection_info(data)
-        self.waterfall_display.handle_status(data)
-        # Auto-switch to live spectrum when backend is online
-        if not hasattr(self, '_waterfall_live') or not self._waterfall_live:
-            self.waterfall_display.set_demo_mode(False)
-            self._waterfall_live = True
+
+        # On the very first status packet, let the backend tell us whether the
+        # waterfall is enabled (-W was NOT passed).  Configure once and for all.
+        if not self._waterfall_configured:
+            self._waterfall_configured = True
+            # json.loads returns True/False for JSON true/false; default True if absent
+            self._waterfall_on = data.get("waterfall", True)
+            self.waterfall_display.setVisible(self._waterfall_on)
+            if self._waterfall_on:
+                # Start the UDP receiver — backend is already sending spectrum data
+                self.waterfall_display.set_active(True)
+
+        # Strip the internal meta-field before passing to widgets
+        status = {k: v for k, v in data.items() if k != "waterfall"}
+
+        if self._waterfall_on:
+            # SNR and sync belong to the waterfall overlay only
+            self.waterfall_display.handle_status(status)
+            conn_data = {k: v for k, v in status.items() if k not in ("snr", "sync")}
+            self.connection_info.handle_connection_info(conn_data)
+        else:
+            # No waterfall — SNR and sync show in Connection Info
+            self.connection_info.handle_connection_info(status)
 
     @QtCore.Slot()
     def _handle_connection_lost(self):
@@ -93,17 +112,19 @@ class Main(QtWidgets.QWidget):
         reset_data['client_tcp_connected'] = False
         reset_data['user_callsign'] = ''
         reset_data['dest_callsign'] = ''
-        self.connection_info.handle_connection_info(reset_data)
-        # Reset waterfall overlay
-        self.waterfall_display.handle_status({'snr': 0.0, 'sync': False})
-        self._waterfall_live = False
+        # Strip internal meta-field
+        reset_data.pop('waterfall', None)
+        if getattr(self, '_waterfall_on', False):
+            conn_data = {k: v for k, v in reset_data.items() if k not in ('snr', 'sync')}
+            self.connection_info.handle_connection_info(conn_data)
+        else:
+            self.connection_info.handle_connection_info(reset_data)
 
     def _connect_signals(self):        
         # CONEXÃO DO SINAL CUSTOMIZADO: Conecta o sinal 'command_to_send' ao handler de envio
         self.app_controls_view.get_soundcard_control().command_to_send.connect(self._send_json_command)
-        self.app_controls_view.get_radio_control().command_to_send.connect(self._send_json_command)       
-        
-        
+        self.app_controls_view.get_radio_control().command_to_send.connect(self._send_json_command)
+
     @QtCore.Slot(dict)
     def _send_json_command(self, command_dict: dict):
         """Recebe um dicionário de comando já formatado do ComboBox e o envia via UDP."""
