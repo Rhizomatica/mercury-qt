@@ -15,7 +15,6 @@ PAIRED_LABELS: dict = {}
 
 # Preferred display order. Keys not listed here appear after in original order.
 FIELD_ORDER = [
-    "type",
     "bitrate",
     "snr",
     "sync",
@@ -26,6 +25,9 @@ FIELD_ORDER = [
     "bytes_transmitted",
     "bytes_received",
 ]
+
+# Keys to exclude from display.
+FIELD_EXCLUDE = {"type"}
 
 # Keys whose values should be displayed in uppercase.
 UPPERCASE_VALUES = {"direction"}
@@ -87,9 +89,11 @@ class JsonDetailView(QtWidgets.QWidget):
 
         # Use FIELD_ORDER for controlled ordering; append unknown keys at the end.
         ordered_keys = [k for k in FIELD_ORDER if k in data] + \
-                       [k for k in data.keys() if k not in FIELD_ORDER]
+                       [k for k in data.keys() if k not in FIELD_ORDER and k not in FIELD_EXCLUDE and k not in FIELD_ORDER]
 
         for key in ordered_keys:
+            if key in FIELD_EXCLUDE:
+                continue
             if key == "message" and "type" not in data:
                 continue
             if key in paired_rendered:
