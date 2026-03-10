@@ -82,6 +82,36 @@ This command will launch the Qt GUI application, ready to communicate with Mercu
 
 -----
 
+## Packaging
+
+### Linux (Debian packages)
+
+The repository now includes a `debian/` directory so you can build a Debian
+package with the standard Debian packaging tools, for example:
+
+```bash
+dpkg-buildpackage -us -uc
+```
+
+### Windows bundle
+
+Use the provided helper script to run `pyside6-deploy` against the dedicated
+Windows entry point:
+
+```bash
+python3 scripts/build_windows_bundle.py
+```
+
+On the first run, `pyside6-deploy` creates `pysidedeploy.spec` in the project
+root. You can pass additional deployment flags through the helper script, for
+example:
+
+```bash
+python3 scripts/build_windows_bundle.py -- --keep-deployment-files
+```
+
+-----
+
 ## Example Usage
 
 After running `python3 app.py [app_name]` 

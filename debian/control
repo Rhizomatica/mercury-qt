@@ -1,0 +1,25 @@
+Source: mercury-qt
+Section: utils
+Priority: optional
+Maintainer: Rhizomatica Developers <info@rhizomatica.org>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-python,
+ python3-all
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/Rhizomatica/mercury-qt
+
+Package: mercury-qt
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python3:Depends},
+ python3-pyside6.qtcharts,
+ python3-pyside6.qtcore,
+ python3-pyside6.qtgui,
+ python3-pyside6.qtnetwork,
+ python3-pyside6.qtwidgets
+Description: Qt GUI for interacting with Mercury over UDP
+ mercury-qt provides a PySide6 desktop client for monitoring and controlling
+ Mercury over UDP.
