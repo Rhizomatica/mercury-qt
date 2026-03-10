@@ -1,0 +1,8 @@
+app.py usr/share/mercury-qt/
+README.md usr/share/doc/mercury-qt/
+apps usr/share/mercury-qt/
+core usr/share/mercury-qt/
+assets usr/share/mercury-qt/
+debian/mercury-qt usr/bin/
+debian/mercury-qt.desktop usr/share/applications/
+assets/Rhizomatica.jpeg usr/share/pixmaps/mercury-qt.jpeg

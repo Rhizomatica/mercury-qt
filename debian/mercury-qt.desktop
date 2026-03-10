@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Mercury Qt
+Comment=Qt GUI for interacting with Mercury over UDP
+Exec=mercury-qt
+Icon=mercury-qt
+Terminal=false
+Categories=Network;Utility;
+Keywords=Mercury;UDP;Qt;
+StartupNotify=true
