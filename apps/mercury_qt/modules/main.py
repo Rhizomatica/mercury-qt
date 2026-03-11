@@ -114,7 +114,9 @@ class Main(QtWidgets.QWidget):
         reset_data['dest_callsign'] = ''
         # Strip internal meta-field
         reset_data.pop('waterfall', None)
-        if getattr(self, '_waterfall_on', False):
+        if self._waterfall_on:
+            # Reset waterfall SNR/sync overlay
+            self.waterfall_display.handle_status({'snr': 0.0, 'sync': False})
             conn_data = {k: v for k, v in reset_data.items() if k not in ('snr', 'sync')}
             self.connection_info.handle_connection_info(conn_data)
         else:
