@@ -72,7 +72,6 @@ class ClientUDP(QObject):
                 continue
 
             message = datagram.data().decode('utf-8')
-            print(f"Received from server {sender_ip}:{port}:{message}")
             try:
                 json_data = json.loads(message)
                 # Reset inactivity watchdog on every received packet
