@@ -65,7 +65,10 @@ class ClientUDP(QObject):
             if self._locked_host is None:
                 # First packet received — lock onto this sender
                 self._locked_host = sender_ip
+                # Update the outgoing destination so commands reach this Mercury instance
+                self.SERVER_HOST = sender_ip
                 print(f"Locked onto Mercury process at {sender_ip}:{port}")
+                print(f"Commands will be sent to {self.SERVER_HOST}:{self.SERVER_SEND_PORT}")
             elif sender_ip != self._locked_host:
                 # Packet from a different Mercury process — discard it
                 print(f"Discarding packet from {sender_ip}:{port} (locked to {self._locked_host})")
