@@ -90,25 +90,55 @@ The repository now includes a `debian/` directory so you can build a Debian
 package with the standard Debian packaging tools, for example:
 
 ```bash
-dpkg-buildpackage -us -uc
+dpkg-buildpackage -us -uc -b
 ```
+
+The resulting package declares the local `mercury` backend and `python3-numpy`
+as runtime dependencies, matching the current GUI/runtime assumptions.
 
 ### Windows bundle
 
-Use the provided helper script to run `pyside6-deploy` against the dedicated
-Windows entry point:
+The supported Linux-hosted Windows flow uses a full Windows Python **3.12**
+installation under Wine together with `PySide6` and `Nuitka 2.7.11`. The helper
+below installs that toolchain into a dedicated Wine prefix and stages the ICU
+runtime DLLs from the Cygwin `mingw64-x86_64-icu` package:
 
 ```bash
-python3 scripts/build_windows_bundle.py
+python3 scripts/setup_wine_python.py \
+  /path/to/python-3.12.x-amd64.exe \
+  --wine-prefix /path/to/wine-python312
 ```
 
-On the first run, `pyside6-deploy` creates `pysidedeploy.spec` in the project
-root. You can pass additional deployment flags through the helper script, for
-example:
+Once that prefix is ready, build the GUI bundle and stage `mercury.exe` from the
+sibling `../mercury` checkout:
 
 ```bash
-python3 scripts/build_windows_bundle.py -- --keep-deployment-files
+python3 scripts/build_windows_bundle.py \
+  --wine-python /path/to/wine-python312/drive_c/Python312/python.exe \
+  --wine-prefix /path/to/wine-python312 \
+  -- --force --keep-deployment-files
 ```
+
+The helper installs the app's Python dependencies in the Wine prefix, stages
+the ICU runtime from the Cygwin `mingw64-x86_64-icu` package, invokes Nuitka
+directly under Wine with PE-file dependency scanning, includes the Qt
+stylesheet assets used at runtime, and produces a standalone runtime directory
+at `deployment/mercury-qt.dist/`. The GUI launcher ends up at
+`deployment/mercury-qt.dist/mercury-qt.exe`, with the cross-built
+`deployment/mercury-qt.dist/mercury.exe` staged next to it together with the
+extra Hamlib-side DLLs that `mercury` includes in its `make windows-zip`
+target. If you have already built `mercury.exe`, pass `--skip-mercury-build`.
+
+For local Wine testing of an already-built bundle, run:
+
+```bash
+bash scripts/run_windows_bundle_wine.sh
+```
+
+That helper starts `mercury.exe -G -u 127.0.0.1 -U 10000` from
+`deployment/mercury-qt.dist/`, then launches `mercury-qt.exe` with the same
+Wine prefix. Override the defaults with `WINEPREFIX=/path/to/prefix` and
+`MERCURY_QT_BUNDLE_DIR=/path/to/mercury-qt.dist` if needed.
 
 -----
 

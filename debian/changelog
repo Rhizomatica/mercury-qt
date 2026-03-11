@@ -1,5 +1,8 @@
 mercury-qt (0.1.0) unstable; urgency=medium
 
   * Add Debian packaging metadata for mercury-qt.
+  * Ship the renamed launcher wrapper so debhelper can stage the package cleanly.
+  * Depend on the Mercury backend and python3-numpy at runtime.
+  * Document the Wine-hosted Windows bundle workflow.
 
  -- Rhizomatica Developers <info@rhizomatica.org>  Tue, 10 Mar 2026 21:05:27 +0000
