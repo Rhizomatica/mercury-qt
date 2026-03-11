@@ -91,6 +91,7 @@ class WaterfallWidget(QtWidgets.QWidget):
     REFRESH_MS = 50               # display refresh interval (20 fps)
     DEFAULT_FFT_SIZE = 512        # default number of frequency bins
     DEFAULT_SAMPLE_RATE = 8000    # Hz – default audio sample rate
+    DISPLAY_MAX_HZ = 3000.0       # Hz – clamp the visible spectrum span
     # dB range calibrated to modem_stats_get_rx_spectrum output using raw i16
     # input (FDMDV_SCALE=825 reference).  Typical signal: -10..+15 dB;
     # typical noise floor: -40..-25 dB;  full-scale i16: +26 dB.
@@ -202,8 +203,33 @@ class WaterfallWidget(QtWidgets.QWidget):
 
     def _hz_to_x(self, hz: float, width: int) -> float:
         """Map a frequency (Hz) to an x-pixel coordinate."""
-        max_hz = self._sample_rate / 2.0
+        max_hz = self._visible_max_hz()
+        if max_hz <= 0:
+            return 0.0
+        hz = max(0.0, min(hz, max_hz))
         return (hz / max_hz) * width
+
+    def _visible_max_hz(self) -> float:
+        return min(self._sample_rate / 2.0, self.DISPLAY_MAX_HZ)
+
+    def _visible_bin_count(self) -> int:
+        max_hz = self._sample_rate / 2.0
+        visible_max_hz = self._visible_max_hz()
+        if max_hz <= 0 or self._n_bins <= 1:
+            return max(1, self._n_bins)
+        return max(
+            1,
+            min(
+                self._n_bins,
+                int(np.ceil(self._n_bins * (visible_max_hz / max_hz))),
+            ),
+        )
+
+    def _x_to_bin_index(self, px: int, width: int, visible_bins: int) -> int:
+        if visible_bins <= 1 or width <= 1:
+            return 0
+        bin_f = (px / (width - 1)) * (visible_bins - 1)
+        return min(int(bin_f), visible_bins - 1)
 
     def _db_to_color_index(self, db: float) -> int:
         """Map dB value to 0..255 colour-map index."""
@@ -212,7 +238,7 @@ class WaterfallWidget(QtWidgets.QWidget):
 
     def _render_waterfall_image(self, w: int, h: int) -> QImage:
         """Render the waterfall bitmap from the ring buffer."""
-        n_bins = self._n_bins
+        n_bins = self._visible_bin_count()
         lines = min(self._lines_written, self._history)
 
         img = QImage(w, h, QImage.Format.Format_RGB32)
@@ -234,8 +260,7 @@ class WaterfallWidget(QtWidgets.QWidget):
             spectrum = self._waterfall_data[ring_pos]
 
             for px in range(w):
-                bin_f = (px / w) * n_bins
-                bin_i = min(int(bin_f), n_bins - 1)
+                bin_i = self._x_to_bin_index(px, w, n_bins)
                 ci = self._db_to_color_index(spectrum[bin_i])
                 c = self._cmap[ci]
                 img.setPixelColor(px, row_y, c)
@@ -244,7 +269,7 @@ class WaterfallWidget(QtWidgets.QWidget):
 
     def _render_waterfall_image_fast(self, w: int, h: int) -> QImage:
         """Render waterfall via numpy for speed."""
-        n_bins = self._n_bins
+        n_bins = self._visible_bin_count()
         lines = min(self._lines_written, self._history)
 
         if lines == 0:
@@ -347,7 +372,7 @@ class WaterfallWidget(QtWidgets.QWidget):
         # Background
         p.fillRect(x0, y0, w, h, QColor(10, 10, 18))
 
-        n_bins = self._n_bins
+        visible_bins = self._visible_bin_count()
         spec = self._current_spectrum
 
         # Faint grid lines
@@ -368,8 +393,7 @@ class WaterfallWidget(QtWidgets.QWidget):
         path = QPainterPath()
         path.moveTo(x0, y0 + h)
         for px in range(w):
-            bin_f = (px / w) * n_bins
-            bin_i = min(int(bin_f), n_bins - 1)
+            bin_i = self._x_to_bin_index(px, w, visible_bins)
             db = float(spec[bin_i])
             fy = y0 + h - ((db - self.MIN_DB) / (self.MAX_DB - self.MIN_DB)) * h
             fy = max(y0, min(y0 + h, fy))
@@ -390,8 +414,7 @@ class WaterfallWidget(QtWidgets.QWidget):
         p.setPen(pen_line)
         prev = None
         for px in range(w):
-            bin_f = (px / w) * n_bins
-            bin_i = min(int(bin_f), n_bins - 1)
+            bin_i = self._x_to_bin_index(px, w, visible_bins)
             db = float(spec[bin_i])
             fy = y0 + h - ((db - self.MIN_DB) / (self.MAX_DB - self.MIN_DB)) * h
             fy = max(y0, min(y0 + h, fy))
@@ -462,9 +485,9 @@ class WaterfallWidget(QtWidgets.QWidget):
         p.setFont(font)
         p.setPen(QColor(160, 160, 180))
 
-        max_hz = self._sample_rate / 2.0
+        max_hz = self._visible_max_hz()
         # Choose nice tick spacing
-        if max_hz <= 4000:
+        if max_hz <= 3000:
             tick_step = 500
         elif max_hz <= 8000:
             tick_step = 1000
@@ -493,7 +516,7 @@ class WaterfallWidget(QtWidgets.QWidget):
 
     def mousePressEvent(self, event):  # noqa: N802
         if event.button() == Qt.MouseButton.LeftButton:
-            max_hz = self._sample_rate / 2.0
+            max_hz = self._visible_max_hz()
             hz = (event.position().x() / self.width()) * max_hz
             self.frequency_clicked.emit(hz)
         super().mousePressEvent(event)
