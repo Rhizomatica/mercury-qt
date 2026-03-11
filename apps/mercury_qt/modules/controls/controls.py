@@ -8,12 +8,27 @@ class Controls(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
-        self.soundcard_control = ComboBox("soundcard")
+        self.capture_dev_control = ComboBox("capture_dev")
+        self.playback_dev_control = ComboBox("playback_dev")
         self.radio_control = ComboBox("radio")
 
         controls_layout = QtWidgets.QVBoxLayout()
-        controls_layout.addWidget(self.soundcard_control)
+
+        # Radio Capture Device
+        capture_label = QtWidgets.QLabel("Radio Capture Device")
+        controls_layout.addWidget(capture_label)
+        controls_layout.addWidget(self.capture_dev_control)
+
+        # Radio Playback Device
+        playback_label = QtWidgets.QLabel("Radio Playback Device")
+        controls_layout.addWidget(playback_label)
+        controls_layout.addWidget(self.playback_dev_control)
+
+        # Radio
+        radio_label = QtWidgets.QLabel("Radio")
+        controls_layout.addWidget(radio_label)
         controls_layout.addWidget(self.radio_control)
+
         controls_layout.addStretch()
 
         self.group_box = QtWidgets.QGroupBox("Controls")
@@ -27,5 +42,8 @@ class Controls(QtWidgets.QWidget):
     def get_radio_control(self) -> ComboBox:
         return self.radio_control
 
-    def get_soundcard_control(self) -> ComboBox:
-        return self.soundcard_control
+    def get_capture_dev_control(self) -> ComboBox:
+        return self.capture_dev_control
+
+    def get_playback_dev_control(self) -> ComboBox:
+        return self.playback_dev_control
