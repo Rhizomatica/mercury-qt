@@ -58,7 +58,8 @@ class Main(QtWidgets.QWidget):
         msg_type = data.get("type")
         
         handlers = {
-            "soundcard_list": self.handle_soundcard_data,
+            "capture_dev_list": self.handle_capture_dev_data,
+            "playback_dev_list": self.handle_playback_dev_data,
             "radio_list": self.handle_radio_data,
             "status": self._handle_status_data,
         }
@@ -69,11 +70,19 @@ class Main(QtWidgets.QWidget):
         else:
             print(f"Unknown message type: {msg_type}")
     
-    def handle_soundcard_data(self, data: dict):
-        soundcards = data.get("list", [])
+    def handle_capture_dev_data(self, data: dict):
+        devices = data.get("list", [])
         selected = data.get("selected", "")
-        ctrl = self.app_controls_view.get_soundcard_control()
-        ctrl.set_options(soundcards)
+        ctrl = self.app_controls_view.get_capture_dev_control()
+        ctrl.set_options(devices)
+        if selected:
+            ctrl.set_selected(selected)
+
+    def handle_playback_dev_data(self, data: dict):
+        devices = data.get("list", [])
+        selected = data.get("selected", "")
+        ctrl = self.app_controls_view.get_playback_dev_control()
+        ctrl.set_options(devices)
         if selected:
             ctrl.set_selected(selected)
 
@@ -132,7 +141,8 @@ class Main(QtWidgets.QWidget):
 
     def _connect_signals(self):        
         # CONEXÃO DO SINAL CUSTOMIZADO: Conecta o sinal 'command_to_send' ao handler de envio
-        self.app_controls_view.get_soundcard_control().command_to_send.connect(self._send_json_command)
+        self.app_controls_view.get_capture_dev_control().command_to_send.connect(self._send_json_command)
+        self.app_controls_view.get_playback_dev_control().command_to_send.connect(self._send_json_command)
         self.app_controls_view.get_radio_control().command_to_send.connect(self._send_json_command)
 
     @QtCore.Slot(dict)
