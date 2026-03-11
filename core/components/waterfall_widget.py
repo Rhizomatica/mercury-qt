@@ -18,12 +18,10 @@ colour map that VARA uses.
 
 from __future__ import annotations
 
-import math
-import struct
 import numpy as np
 from typing import List, Optional
-from PySide6 import QtCore, QtWidgets, QtGui
-from PySide6.QtCore import Qt, QTimer, Signal, Slot, QRect, QRectF, QPointF
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt, QTimer, Signal, Slot, QPointF
 from PySide6.QtGui import (
     QPainter, QColor, QLinearGradient, QImage, QPen, QFont,
     QBrush, QFontMetrics, QPainterPath
@@ -285,8 +283,9 @@ class WaterfallWidget(QtWidgets.QWidget):
                 | rgb[:, :, 2].astype(np.uint32))
 
         img = QImage(argb.data, w, h, w * 4, QImage.Format.Format_RGB32)
-        # QImage doesn't copy the data, so we must keep a reference
-        img._numpy_ref = argb
+        # QImage doesn't copy the data, so we must keep a reference to the
+        # underlying NumPy buffer on the widget instead of on the QImage.
+        self._wf_argb_ref = argb
         return img
 
     # ------------------------------------------------------------------
@@ -313,7 +312,12 @@ class WaterfallWidget(QtWidgets.QWidget):
             wf_h = 10
 
         # ---- Waterfall image ----
-        if self._wf_image is None or self._dirty:
+        if (
+            self._wf_image is None
+            or self._dirty
+            or self._wf_image.width() != w
+            or self._wf_image.height() != wf_h
+        ):
             self._wf_image = self._render_waterfall_image_fast(w, wf_h)
             self._dirty = False
         p.drawImage(0, wf_y, self._wf_image)

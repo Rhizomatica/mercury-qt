@@ -40,9 +40,9 @@ class SpectrumProvider(QObject):
     spectrum_ready = Signal(object, int)
 
     def __init__(self, parent=None, *,
-                 udp_port: int = SPECTRUM_UDP_PORT):
+                 udp_port: int | None = None):
         super().__init__(parent)
-        self._udp_port = udp_port
+        self._udp_port: int = udp_port if udp_port is not None else SPECTRUM_UDP_PORT
         self._udp_socket: Optional[QUdpSocket] = None
 
     # ------------------------------------------------------------------

@@ -11,15 +11,19 @@ class ClientUDP(QObject):
     DEFAULT_BASE_PORT    = 10000
     DEFAULT_RECEIVE_PORT = DEFAULT_BASE_PORT      # RECEIVE_PORT = BASE_PORT      (UI listens, backend TX)
     DEFAULT_SEND_PORT    = DEFAULT_BASE_PORT + 1  # SEND_PORT    = BASE_PORT + 1  (UI sends,   backend RX)
-    DEFAULT_HOST         = '0.0.0.0'
+    DEFAULT_BIND_HOST    = '0.0.0.0'   # listen on all interfaces
+    DEFAULT_SERVER_HOST  = '127.0.0.1' # default destination for outgoing datagrams
 
     INACTIVITY_MS = 2000  # declare connection lost after 2s silence
 
     def __init__(self, host=None, receive_port=None, send_port=None, parent=None):
         super().__init__(parent)
         print("Create a UDP socket (IPv4, UDP)")
-        self.HOST = host or self.DEFAULT_HOST
-        self.RECEIVE_PORT = receive_port or self.DEFAULT_RECEIVE_PORT
+        # `host` may be a combined host string (legacy) or a server destination.
+        # Bind always uses the wildcard address; only outgoing datagrams use host.
+        self.BIND_HOST        = self.DEFAULT_BIND_HOST
+        self.SERVER_HOST      = host or self.DEFAULT_SERVER_HOST
+        self.RECEIVE_PORT     = receive_port or self.DEFAULT_RECEIVE_PORT
         self.SERVER_SEND_PORT = send_port or self.DEFAULT_SEND_PORT
         self.udp_socket = QUdpSocket(self)
 
@@ -36,13 +40,13 @@ class ClientUDP(QObject):
         self._inactivity_timer.timeout.connect(self._on_inactivity_timeout)
 
         # Bind the UDP socket to the client's receive port
-        if not self.udp_socket.bind(QHostAddress(self.HOST), self.RECEIVE_PORT):
-            print(f"Error: Could not bind UDP socket to {self.HOST}:{self.RECEIVE_PORT}")
+        if not self.udp_socket.bind(QHostAddress(self.BIND_HOST), self.RECEIVE_PORT):
+            print(f"Error: Could not bind UDP socket to {self.BIND_HOST}:{self.RECEIVE_PORT}")
             # TODO - toast error
             sys.exit(1)
 
         self.udp_socket.readyRead.connect(self.read_pending_datagrams)
-        print(f"UDP Client listening on {self.HOST}:{self.RECEIVE_PORT}")
+        print(f"UDP Client listening on {self.BIND_HOST}:{self.RECEIVE_PORT}")
 
     @Slot()
     def _on_inactivity_timeout(self):
@@ -82,7 +86,7 @@ class ClientUDP(QObject):
 
 
     def start_udp_client(self):
-        print(f"UDP Client sending to {self.HOST}:{self.SERVER_SEND_PORT}")
+        print(f"UDP Client sending to {self.SERVER_HOST}:{self.SERVER_SEND_PORT}")
         ping_message = "Ping Mercury UDP server..."
         self.send_message(ping_message)
 
@@ -102,7 +106,7 @@ class ClientUDP(QObject):
         
         # NOTE: A documentação do PySide6/Qt sugere que o writeDatagram deve usar
         # o QHostAddress e a porta do destinatário.
-        bytes_sent = self.udp_socket.writeDatagram(data, QHostAddress(self.HOST), self.SERVER_SEND_PORT)
+        bytes_sent = self.udp_socket.writeDatagram(data, QHostAddress(self.SERVER_HOST), self.SERVER_SEND_PORT)
         
         if bytes_sent == -1:
             print(f"Error sending message: {self.udp_socket.errorString()}")

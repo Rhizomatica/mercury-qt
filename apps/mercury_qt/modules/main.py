@@ -105,7 +105,7 @@ class Main(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def _handle_connection_lost(self):
-        """Called 3 s after the last UDP packet — backend is gone."""
+        """Called 2s after the last UDP packet — backend is gone."""
         last = getattr(self, '_last_status_data', {})
         # Build a reset dict with the same keys but cleared status values
         reset_data = {k: v for k, v in last.items()}

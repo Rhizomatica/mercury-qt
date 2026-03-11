@@ -6,7 +6,7 @@ Shows a live waterfall when a spectrum UDP port is provided, otherwise
 displays a blank (black) screen.
 """
 
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets
 from PySide6.QtCore import Slot
 from core.components.waterfall_widget import WaterfallWidget
 from core.components.spectrum_provider import SpectrumProvider
@@ -17,6 +17,7 @@ class WaterfallDisplay(QtWidgets.QWidget):
 
     def __init__(self, parent=None, spectrum_port: int | None = None):
         super().__init__(parent)
+        self._spectrum_port = spectrum_port
 
         # ---- Waterfall widget ----
         self.waterfall = WaterfallWidget(
@@ -66,6 +67,7 @@ class WaterfallDisplay(QtWidgets.QWidget):
         """Start or stop the spectrum UDP receiver."""
         self._active = enabled
         if enabled:
-            self.provider.start()
+            if self._spectrum_port is not None:
+                self.provider.start()
         else:
             self.provider.stop()

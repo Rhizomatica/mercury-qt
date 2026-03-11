@@ -1,4 +1,4 @@
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets, QtCore
 from core.components.status_flag import StatusFlag
 
 # Human-readable labels for specific JSON keys.
@@ -89,7 +89,7 @@ class JsonDetailView(QtWidgets.QWidget):
 
         # Use FIELD_ORDER for controlled ordering; append unknown keys at the end.
         ordered_keys = [k for k in FIELD_ORDER if k in data] + \
-                       [k for k in data.keys() if k not in FIELD_ORDER and k not in FIELD_EXCLUDE and k not in FIELD_ORDER]
+                       [k for k in data.keys() if k not in FIELD_ORDER and k not in FIELD_EXCLUDE]
 
         for key in ordered_keys:
             if key in FIELD_EXCLUDE:
