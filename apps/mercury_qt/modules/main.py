@@ -60,6 +60,7 @@ class Main(QtWidgets.QWidget):
         handlers = {
             "capture_dev_list": self.handle_capture_dev_data,
             "playback_dev_list": self.handle_playback_dev_data,
+            "input_channel": self.handle_input_channel_data,
             "radio_list": self.handle_radio_data,
             "status": self._handle_status_data,
         }
@@ -91,6 +92,14 @@ class Main(QtWidgets.QWidget):
         selected = data.get("selected", "")
         ctrl = self.app_controls_view.get_radio_control()
         ctrl.set_options(radios)
+        if selected:
+            ctrl.set_selected(selected)
+
+    def handle_input_channel_data(self, data: dict):
+        channels = data.get("list", [])
+        selected = data.get("selected", "")
+        ctrl = self.app_controls_view.get_input_channel_control()
+        ctrl.set_options(channels)
         if selected:
             ctrl.set_selected(selected)
 
@@ -143,6 +152,7 @@ class Main(QtWidgets.QWidget):
         # CONEXÃO DO SINAL CUSTOMIZADO: Conecta o sinal 'command_to_send' ao handler de envio
         self.app_controls_view.get_capture_dev_control().command_to_send.connect(self._send_json_command)
         self.app_controls_view.get_playback_dev_control().command_to_send.connect(self._send_json_command)
+        self.app_controls_view.get_input_channel_control().command_to_send.connect(self._send_json_command)
         self.app_controls_view.get_radio_control().command_to_send.connect(self._send_json_command)
 
     @QtCore.Slot(dict)

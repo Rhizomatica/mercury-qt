@@ -10,6 +10,7 @@ class Controls(QtWidgets.QWidget):
 
         self.capture_dev_control = ComboBox("capture_dev")
         self.playback_dev_control = ComboBox("playback_dev")
+        self.input_channel_control = ComboBox("input_channel")
         self.radio_control = ComboBox("radio")
 
         controls_layout = QtWidgets.QVBoxLayout()
@@ -23,6 +24,11 @@ class Controls(QtWidgets.QWidget):
         playback_label = QtWidgets.QLabel("Radio Playback Device")
         controls_layout.addWidget(playback_label)
         controls_layout.addWidget(self.playback_dev_control)
+
+        # Capture Input Channel
+        input_channel_label = QtWidgets.QLabel("Capture Input Channel")
+        controls_layout.addWidget(input_channel_label)
+        controls_layout.addWidget(self.input_channel_control)
 
         # Radio
         radio_label = QtWidgets.QLabel("Radio")
@@ -47,3 +53,6 @@ class Controls(QtWidgets.QWidget):
 
     def get_playback_dev_control(self) -> ComboBox:
         return self.playback_dev_control
+
+    def get_input_channel_control(self) -> ComboBox:
+        return self.input_channel_control
