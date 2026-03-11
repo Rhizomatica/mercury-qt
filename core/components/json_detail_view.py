@@ -1,5 +1,36 @@
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets, QtCore
 from core.components.status_flag import StatusFlag
+
+# Human-readable labels for specific JSON keys.
+FIELD_LABELS = {
+    "user_callsign": "User Callsign",
+    "dest_callsign": "Dest Callsign",
+    "client_tcp_connected": "Client TCP Connected",
+    "snr": "SNR",
+}
+
+# No paired fields — each key rendered on its own row.
+PAIRED_FIELDS: list = []
+PAIRED_LABELS: dict = {}
+
+# Preferred display order. Keys not listed here appear after in original order.
+FIELD_ORDER = [
+    "bitrate",
+    "snr",
+    "sync",
+    "direction",
+    "user_callsign",
+    "dest_callsign",
+    "client_tcp_connected",
+    "bytes_transmitted",
+    "bytes_received",
+]
+
+# Keys to exclude from display.
+FIELD_EXCLUDE = {"type"}
+
+# Keys whose values should be displayed in uppercase.
+UPPERCASE_VALUES = {"direction"}
 
 class JsonDetailView(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -53,14 +84,60 @@ class JsonDetailView(QtWidgets.QWidget):
         
         self.labels.clear()
 
-        for key in data.keys():
+        # Keys already rendered as part of a paired row — skip on individual pass
+        paired_rendered: set = set()
+
+        # Use FIELD_ORDER for controlled ordering; append unknown keys at the end.
+        ordered_keys = [k for k in FIELD_ORDER if k in data] + \
+                       [k for k in data.keys() if k not in FIELD_ORDER and k not in FIELD_EXCLUDE]
+
+        for key in ordered_keys:
+            if key in FIELD_EXCLUDE:
+                continue
             if key == "message" and "type" not in data:
-                continue 
-            
-            key_label_widget = QtWidgets.QLabel(f"<b>{key.replace('_', ' ').capitalize()}</b>")
-            
+                continue
+            if key in paired_rendered:
+                continue
+
+            # If this key is the secondary (right) part of any complete pair, skip it —
+            # it will be rendered when the primary (left) key is processed.
+            if any(p[1] == key and p[0] in data for p in PAIRED_FIELDS):
+                paired_rendered.add(key)
+                continue
+
+            # Check if this key starts a paired group
+            pair_match = next((p for p in PAIRED_FIELDS if p[0] == key and p[1] in data), None)
+            if pair_match:
+                key_a, key_b = pair_match
+                row_label_text = PAIRED_LABELS.get(pair_match, f"{key_a} / {key_b}")
+                row_label_widget = QtWidgets.QLabel(f"<b>{row_label_text}</b>")
+
+                container = QtWidgets.QWidget()
+                container.setStyleSheet("background: transparent;")
+                h_layout = QtWidgets.QHBoxLayout(container)
+                h_layout.setContentsMargins(0, 0, 0, 0)
+                h_layout.setSpacing(6)
+
+                label_a = QtWidgets.QLabel(str(data.get(key_a)) if data.get(key_a) is not None else "N/A")
+                sep = QtWidgets.QLabel("→")
+                sep.setStyleSheet("color: rgb(255, 136, 0);")
+                label_b = QtWidgets.QLabel(str(data.get(key_b)) if data.get(key_b) is not None else "N/A")
+
+                h_layout.addWidget(label_a)
+                h_layout.addWidget(sep)
+                h_layout.addWidget(label_b)
+                h_layout.addStretch()
+
+                self.layout.addRow(row_label_widget, container)
+                self.labels[key_a] = label_a
+                self.labels[key_b] = label_b
+                paired_rendered.add(key_a)
+                paired_rendered.add(key_b)
+                continue
+
+            label_text = FIELD_LABELS.get(key, key.replace('_', ' ').capitalize())
+            key_label_widget = QtWidgets.QLabel(f"<b>{label_text}</b>")
             value_widget = self._render_component(key, data.get(key))
-            
             self.layout.addRow(key_label_widget, value_widget)
             self.labels[key] = value_widget
         
@@ -99,7 +176,9 @@ class JsonDetailView(QtWidgets.QWidget):
             return sync_status_flag        
         else:
             # Default to QLabel for all other fields
-            label = QtWidgets.QLabel(str(initial_value) if initial_value is not None else "N/A")
+            display = str(initial_value).upper() if key in UPPERCASE_VALUES and initial_value is not None else \
+                      (str(initial_value) if initial_value is not None else "N/A")
+            label = QtWidgets.QLabel(display)
             return label
 
     def _update_component_value(self, key: str, widget: QtWidgets.QWidget, value: any):
@@ -119,6 +198,8 @@ class JsonDetailView(QtWidgets.QWidget):
                 
         else:
             if isinstance(widget, QtWidgets.QLabel):
-                widget.setText(str(value) if value is not None else "N/A")
+                display = str(value).upper() if key in UPPERCASE_VALUES and value is not None else \
+                          (str(value) if value is not None else "N/A")
+                widget.setText(display)
             else:
                 print(f"Warning: Cannot update unknown widget type {type(widget)} for key '{key}'")

@@ -4,19 +4,23 @@ from PySide6 import QtWidgets
 from .modules.main import Main
 
 class MercuryQT():
-    
-    def __init__(self):
+
+    def __init__(self, base_port=10000):
         super().__init__()
-        
-        print("🚀👾 Starting Mercury Qt App...")
-        
+
+        receive_port  = base_port
+        send_port     = base_port + 1
+        spectrum_port = base_port + 2
+
+        print(f"🚀👾 Starting Mercury Qt App (BASE: {base_port}, RX: {receive_port}, TX: {send_port}, SPECTRUM: {spectrum_port})...")
+
         mercury_app = QtWidgets.QApplication([])
         styles = import_styles()
         mercury_app.setStyleSheet(styles)
 
-        widget = Main()
+        widget = Main(base_port=base_port)
         widget.setWindowTitle("Mercury Qt - Interface")
-        widget.resize(720, 480)
+        widget.resize(960, 640)
         widget.show()
 
         sys.exit(mercury_app.exec())

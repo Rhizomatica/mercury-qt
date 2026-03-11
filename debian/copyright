@@ -1,0 +1,9 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: mercury-qt
+Source: https://github.com/Rhizomatica/mercury-qt
+
+Files: *
+Copyright: 2025 Rhizomatica
+License: unknown
+ The upstream repository does not currently include a license file.
+ Update this file with the correct license before distributing the package.
