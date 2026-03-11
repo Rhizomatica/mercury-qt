@@ -1,61 +1,75 @@
 from PySide6 import QtWidgets, QtCore
 
 class ComboBox(QtWidgets.QWidget):
-    # NOVO: Sinal que emitirá o dicionário de comando já formatado
+    # Signal that emits the formatted command dictionary
     command_to_send = QtCore.Signal(dict) 
 
     def __init__(self, key: str, parent=None):
         super().__init__(parent)
         
-        # NOVO: Guarda a chave para formatar o comando (ex: "soundcard" ou "radio")
+        # Key used to format the command (e.g. "capture_dev" or "radio")
         self.key = key 
         
-        # Inicializa o QComboBox
         self.combo_box = QtWidgets.QComboBox()
         
-        # Conecta o sinal nativo do QComboBox ao novo SLOT interno
-        self.combo_box.currentTextChanged.connect(self._on_text_changed)
+        # Connect the native QComboBox signal to the internal slot
+        self.combo_box.currentIndexChanged.connect(self._on_index_changed)
         
-        # Layout (apenas para este exemplo simplificado)
         layout = QtWidgets.QHBoxLayout(self)
         layout.addWidget(self.combo_box)
         self.setLayout(layout)
 
-        # Labels e outras inicializações que você possa ter omitido...
-
     @QtCore.Slot(list)
     def set_options(self, options: list):
-        """Método para popular o ComboBox com opções."""
+        """Populate the ComboBox with options.
+        
+        Each option can be either:
+          - a dict with 'name' and 'id' keys  →  displayed as "name (id)"
+          - a plain string                     →  displayed and used as-is
+        """
         self.combo_box.blockSignals(True)
         self.combo_box.clear()
-        self.combo_box.addItems(options)
+        for opt in options:
+            if isinstance(opt, dict):
+                name = opt.get("name", "")
+                dev_id = opt.get("id", "")
+                display_text = f"{name} ({dev_id})" if name else dev_id
+                self.combo_box.addItem(display_text, userData=dev_id)
+            else:
+                self.combo_box.addItem(str(opt), userData=str(opt))
         self.combo_box.blockSignals(False)
 
     @QtCore.Slot(str)
     def set_selected(self, value: str):
-        """Set the currently selected item without emitting a command."""
-        idx = self.combo_box.findText(value)
-        if idx >= 0:
-            self.combo_box.blockSignals(True)
-            self.combo_box.setCurrentIndex(idx)
-            self.combo_box.blockSignals(False)
+        """Set the currently selected item by its id/value without emitting a command."""
+        for i in range(self.combo_box.count()):
+            if self.combo_box.itemData(i) == value:
+                self.combo_box.blockSignals(True)
+                self.combo_box.setCurrentIndex(i)
+                self.combo_box.blockSignals(False)
+                return
         
-    @QtCore.Slot(str)
-    def _on_text_changed(self, value: str):
+    @QtCore.Slot(int)
+    def _on_index_changed(self, index: int):
+        """Called when the selected index changes.
+        Emits the command with the device id (not the display text).
         """
-        Slot que é chamado quando o texto do ComboBox muda.
-        Responsável por formatar e emitir o comando de negócios.
-        """
+        if index < 0:
+            return
+
+        # Use the stored userData (the id) for the command value
+        value = self.combo_box.itemData(index)
+        if value is None:
+            value = self.combo_box.currentText()
+        
         if not value:
             return
 
-        # A ComboBox AGORA é responsável por criar o comando
         command = {
-            "command": f"set_{self.key}", # Ex: "set_soundcard"
+            "command": f"set_{self.key}",
             "value": value
         }
         
-        # Emite o sinal customizado com o comando formatado
         self.command_to_send.emit(command) 
 
         
