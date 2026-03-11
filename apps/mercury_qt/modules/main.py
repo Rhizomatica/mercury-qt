@@ -71,11 +71,19 @@ class Main(QtWidgets.QWidget):
     
     def handle_soundcard_data(self, data: dict):
         soundcards = data.get("list", [])
-        self.app_controls_view.get_soundcard_control().set_options(soundcards)
+        selected = data.get("selected", "")
+        ctrl = self.app_controls_view.get_soundcard_control()
+        ctrl.set_options(soundcards)
+        if selected:
+            ctrl.set_selected(selected)
 
     def handle_radio_data(self, data: dict):
         radios = data.get("list", [])
-        self.app_controls_view.get_radio_control().set_options(radios)
+        selected = data.get("selected", "")
+        ctrl = self.app_controls_view.get_radio_control()
+        ctrl.set_options(radios)
+        if selected:
+            ctrl.set_selected(selected)
 
     def _handle_status_data(self, data: dict):
         self._last_status_data = data
