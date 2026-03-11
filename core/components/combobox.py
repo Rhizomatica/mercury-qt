@@ -26,8 +26,19 @@ class ComboBox(QtWidgets.QWidget):
     @QtCore.Slot(list)
     def set_options(self, options: list):
         """Método para popular o ComboBox com opções."""
+        self.combo_box.blockSignals(True)
         self.combo_box.clear()
         self.combo_box.addItems(options)
+        self.combo_box.blockSignals(False)
+
+    @QtCore.Slot(str)
+    def set_selected(self, value: str):
+        """Set the currently selected item without emitting a command."""
+        idx = self.combo_box.findText(value)
+        if idx >= 0:
+            self.combo_box.blockSignals(True)
+            self.combo_box.setCurrentIndex(idx)
+            self.combo_box.blockSignals(False)
         
     @QtCore.Slot(str)
     def _on_text_changed(self, value: str):
