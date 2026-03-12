@@ -31,9 +31,13 @@ class ComboBox(QtWidgets.QWidget):
         self.combo_box.clear()
         for opt in options:
             if isinstance(opt, dict):
+                display = opt.get("display", None)
                 name = opt.get("name", "")
                 dev_id = opt.get("id", "")
-                display_text = f"{name} ({dev_id})" if name else dev_id
+                if display:
+                    display_text = display
+                else:
+                    display_text = f"{name} ({dev_id})" if name else dev_id
                 self.combo_box.addItem(display_text, userData=dev_id)
             else:
                 self.combo_box.addItem(str(opt), userData=str(opt))
