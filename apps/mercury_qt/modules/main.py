@@ -156,6 +156,7 @@ class Main(QtWidgets.QWidget):
         self.app_controls_view.get_playback_dev_control().command_to_send.connect(self._send_json_command)
         self.app_controls_view.get_input_channel_control().command_to_send.connect(self._send_json_command)
         self.app_controls_view.get_radio_control().command_to_send.connect(self._send_json_command)
+        self.app_controls_view.get_device_path_input().command_to_send.connect(self._send_json_command)
 
     @QtCore.Slot(dict)
     def _send_json_command(self, command_dict: dict):

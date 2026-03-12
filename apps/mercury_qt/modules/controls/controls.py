@@ -1,5 +1,6 @@
 from PySide6 import QtWidgets, QtCore, QtGui
-from core.components.combobox import ComboBox  # IMPORT ABSOLUTO
+from core.components.combobox import ComboBox
+from core.components.text_input import TextInput
 
 #TODO - Renomear para Controls
 class Controls(QtWidgets.QWidget):
@@ -11,7 +12,9 @@ class Controls(QtWidgets.QWidget):
         self.capture_dev_control = ComboBox("capture_dev")
         self.playback_dev_control = ComboBox("playback_dev")
         self.input_channel_control = ComboBox("input_channel")
-        self.radio_control = ComboBox("radio")
+        self.radio_control = ComboBox("radio_model")
+        self.device_path_input = TextInput("device_path", max_length=255,
+                                            placeholder="e.g. /dev/ttyUSB0 or 127.0.0.1:4532")
 
         controls_layout = QtWidgets.QVBoxLayout()
 
@@ -35,6 +38,11 @@ class Controls(QtWidgets.QWidget):
         controls_layout.addWidget(radio_model_label)
         controls_layout.addWidget(self.radio_control)
 
+        # Device Path
+        device_path_label = QtWidgets.QLabel("Device Path")
+        controls_layout.addWidget(device_path_label)
+        controls_layout.addWidget(self.device_path_input)
+
         controls_layout.addStretch()
 
         self.group_box = QtWidgets.QGroupBox("Radio Controls")
@@ -47,6 +55,9 @@ class Controls(QtWidgets.QWidget):
 
     def get_radio_control(self) -> ComboBox:
         return self.radio_control
+
+    def get_device_path_input(self) -> TextInput:
+        return self.device_path_input
 
     def get_capture_dev_control(self) -> ComboBox:
         return self.capture_dev_control
