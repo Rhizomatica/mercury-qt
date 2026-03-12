@@ -96,6 +96,33 @@ dpkg-buildpackage -us -uc -b
 The resulting package declares the local `mercury` backend and `python3-numpy`
 as runtime dependencies, matching the current GUI/runtime assumptions.
 
+### Linux bundle
+
+For a local Linux bundle, use the wrapper below. It rebuilds the sibling
+`../mercury` checkout with `make clean && make -j4`, then stages `mercury`
+next to a bundled GUI runtime:
+
+```bash
+bash scripts/build_linux_bundle.sh
+```
+
+By default the wrapper tries a native `pyside6-deploy` standalone build when
+`pyside6-deploy`, `python -m nuitka`, and `patchelf` are already available in
+the selected Python environment. If that standalone toolchain is not available,
+it falls back to a runnable source bundle under `deployment-linux/mercury-qt/`
+with a local `mercury-qt` launcher that uses the selected Python interpreter.
+
+Override the defaults with `MERCURY_QT_LINUX_BUNDLE_DIR`,
+`MERCURY_QT_MERCURY_DIR`, `MERCURY_QT_PYTHON`, `MERCURY_QT_APP_TITLE`, and
+`MERCURY_QT_LINUX_BUNDLE_MODE`, or pass wrapper options such as `--bundle-dir`,
+`--mercury-dir`, `--python`, `--mode`, and `--skip-mercury-build`. Extra
+arguments after `--` are forwarded directly to `pyside6-deploy` when standalone
+mode is selected, for example:
+
+```bash
+bash scripts/build_linux_bundle.sh --mode standalone -- --verbose
+```
+
 ### Windows bundle
 
 The supported Linux-hosted Windows flow uses a full Windows Python **3.12**
@@ -111,6 +138,16 @@ python3 scripts/setup_wine_python.py \
 
 Once that prefix is ready, build the GUI bundle and stage `mercury.exe` from the
 sibling `../mercury` checkout:
+
+```bash
+bash scripts/build_windows_bundle_wine.sh -- --force --keep-deployment-files
+```
+
+That wrapper defaults to the sibling `../mercury` checkout and the Wine Python
+3.12 prefix at `../wine-python312`. Override the defaults with
+`MERCURY_QT_MERCURY_DIR`, `MERCURY_QT_WINE_PREFIX`,
+`MERCURY_QT_WINE_PYTHON`, and `MERCURY_QT_BUNDLE_DIR`, or call the Python
+helper directly:
 
 ```bash
 python3 scripts/build_windows_bundle.py \

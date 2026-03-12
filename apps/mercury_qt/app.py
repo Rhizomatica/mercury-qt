@@ -12,7 +12,10 @@ class MercuryQT():
         send_port     = base_port + 1
         spectrum_port = base_port + 2
 
-        print(f"🚀👾 Starting Mercury Qt App (BASE: {base_port}, RX: {receive_port}, TX: {send_port}, SPECTRUM: {spectrum_port})...")
+        print(
+            f"Starting Mercury Qt App "
+            f"(BASE: {base_port}, RX: {receive_port}, TX: {send_port}, SPECTRUM: {spectrum_port})..."
+        )
 
         mercury_app = QtWidgets.QApplication([])
         styles = import_styles()
