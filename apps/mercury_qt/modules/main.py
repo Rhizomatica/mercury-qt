@@ -74,6 +74,7 @@ class Main(QtWidgets.QWidget):
     def handle_capture_dev_data(self, data: dict):
         devices = data.get("list", [])
         selected = data.get("selected", "")
+        devices.insert(0, {"display": "Default", "id": "default"})
         ctrl = self.app_controls_view.get_capture_dev_control()
         ctrl.set_options(devices)
         if selected:
@@ -82,6 +83,7 @@ class Main(QtWidgets.QWidget):
     def handle_playback_dev_data(self, data: dict):
         devices = data.get("list", [])
         selected = data.get("selected", "")
+        devices.insert(0, {"display": "Default", "id": "default"})
         ctrl = self.app_controls_view.get_playback_dev_control()
         ctrl.set_options(devices)
         if selected:
