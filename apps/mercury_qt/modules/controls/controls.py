@@ -16,12 +16,12 @@ class Controls(QtWidgets.QWidget):
         controls_layout = QtWidgets.QVBoxLayout()
 
         # Radio Capture Device
-        capture_label = QtWidgets.QLabel("Radio Capture Device")
+        capture_label = QtWidgets.QLabel("Capture Device")
         controls_layout.addWidget(capture_label)
         controls_layout.addWidget(self.capture_dev_control)
 
         # Radio Playback Device
-        playback_label = QtWidgets.QLabel("Radio Playback Device")
+        playback_label = QtWidgets.QLabel("Playback Device")
         controls_layout.addWidget(playback_label)
         controls_layout.addWidget(self.playback_dev_control)
 
@@ -30,14 +30,14 @@ class Controls(QtWidgets.QWidget):
         controls_layout.addWidget(input_channel_label)
         controls_layout.addWidget(self.input_channel_control)
 
-        # Radio
-        radio_label = QtWidgets.QLabel("Radio")
-        controls_layout.addWidget(radio_label)
+        # HAMLIB Model
+        radio_model_label = QtWidgets.QLabel("HAMLIB Model")
+        controls_layout.addWidget(radio_model_label)
         controls_layout.addWidget(self.radio_control)
 
         controls_layout.addStretch()
 
-        self.group_box = QtWidgets.QGroupBox("Controls")
+        self.group_box = QtWidgets.QGroupBox("Radio Controls")
         self.group_box.setLayout(controls_layout)
 
         main_layout = QtWidgets.QVBoxLayout(self)
