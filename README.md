@@ -172,7 +172,7 @@ For local Wine testing of an already-built bundle, run:
 bash scripts/run_windows_bundle_wine.sh
 ```
 
-That helper starts `mercury.exe -G -u 127.0.0.1 -U 10000` from
+That helper starts `mercury.exe -G -U 10000` from
 `deployment/mercury-qt.dist/`, then launches `mercury-qt.exe` with the same
 Wine prefix. Override the defaults with `WINEPREFIX=/path/to/prefix` and
 `MERCURY_QT_BUNDLE_DIR=/path/to/mercury-qt.dist` if needed.

@@ -4,16 +4,18 @@ from .waterfall.waterfall_display import WaterfallDisplay
 from apps.mercury_qt.modules.controls.controls import RadioControls 
 
 import core.connection.udp.client as Client_UDP
+from core.connection.websocket.client import WebSocketClient
 
 class Main(QtWidgets.QWidget):
     """Main application widget for Mercury QT Client."""
 
-    def __init__(self, base_port=10000):
+    def __init__(self, base_port=10000, ws_port=9999):
         super().__init__()
 
         self.receive_port  = base_port
         self.send_port     = base_port + 1
         self.spectrum_port = base_port + 2
+        self.ws_port       = ws_port
         self.connection_info = ConnectionInfo()
         self.app_controls_view = RadioControls()
         self.waterfall_display = WaterfallDisplay(spectrum_port=self.spectrum_port)
@@ -37,6 +39,7 @@ class Main(QtWidgets.QWidget):
         self.main_layout.addLayout(self.right_column, 1)
         
         self.start_udp_service()
+        self.start_ws_service()
         self._connect_signals()
         
 
@@ -51,6 +54,17 @@ class Main(QtWidgets.QWidget):
         self.client.json_received.connect(self.handle_json_data)
         self.client.connection_lost.connect(self._handle_connection_lost)
         self.client.start_udp_client()
+
+    def start_ws_service(self):
+        """Create and start the WebSocket client to the Mercury C backend."""
+        self.ws_client = WebSocketClient(port=self.ws_port, parent=self)
+        # JSON messages — same handler as UDP
+        self.ws_client.json_received.connect(self.handle_json_data)
+        self.ws_client.connection_lost.connect(self._handle_ws_connection_lost)
+        self.ws_client.connected.connect(self._handle_ws_connected)
+        # Spectrum binary data — feed directly into waterfall
+        self.ws_client.spectrum_ready.connect(self._on_ws_spectrum)
+        self.ws_client.start()
         
     @QtCore.Slot(dict)
     def handle_json_data(self, data: dict):
@@ -158,6 +172,28 @@ class Main(QtWidgets.QWidget):
         else:
             self.connection_info.handle_connection_info(reset_data)
 
+    # ------------------------------------------------------------------
+    #  WebSocket event handlers
+    # ------------------------------------------------------------------
+
+    @QtCore.Slot()
+    def _handle_ws_connected(self):
+        """WebSocket connected — request radio list from the backend."""
+        print("[Main] WebSocket connected to Mercury backend")
+        self._send_json_command({"command": "get_radio_list"})
+
+    @QtCore.Slot()
+    def _handle_ws_connection_lost(self):
+        """WebSocket disconnected — same reset logic as UDP connection lost."""
+        print("[Main] WebSocket disconnected from Mercury backend")
+        self._handle_connection_lost()
+
+    @QtCore.Slot(object, int)
+    def _on_ws_spectrum(self, power_db, sample_rate: int):
+        """Forward spectrum data from WebSocket to the waterfall widget."""
+        if self._waterfall_on:
+            self.waterfall_display.waterfall.push_spectrum(power_db, sample_rate)
+
     def _connect_signals(self):        
         # CONEXÃO DO SINAL CUSTOMIZADO: Conecta o sinal 'command_to_send' ao handler de envio
         self.app_controls_view.get_capture_dev_control().command_to_send.connect(self._send_json_command)
@@ -168,6 +204,9 @@ class Main(QtWidgets.QWidget):
 
     @QtCore.Slot(dict)
     def _send_json_command(self, command_dict: dict):
-        """Recebe um dicionário de comando já formatado do ComboBox e o envia via UDP."""
+        """Send a JSON command to the backend via both UDP and WebSocket."""
         print(f"Sending command: {command_dict}")
+        # Send via UDP (legacy)
         self.client.send_json(command_dict)
+        # Send via WebSocket (new)
+        self.ws_client.send_json(command_dict)

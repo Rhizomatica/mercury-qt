@@ -8,8 +8,7 @@ repo_root="$(cd -- "${script_dir}/.." && pwd)"
 bundle_dir="${MERCURY_QT_BUNDLE_DIR:-${repo_root}/deployment/mercury-qt.dist}"
 wine_prefix="${WINEPREFIX:-/home/rafael2k/files/rhizomatica/hermes/ai/wine-python312}"
 wine_debug="${WINEDEBUG:--all}"
-ui_ip="${MERCURY_UI_IP:-127.0.0.1}"
-ui_base_port="${MERCURY_UI_BASE_PORT:-10000}"
+ui_port="${MERCURY_UI_BASE_PORT:-10000}"
 
 mercury_exe="${bundle_dir}/mercury.exe"
 gui_exe="${bundle_dir}/mercury-qt.exe"
@@ -37,7 +36,7 @@ echo "Using bundle dir: ${bundle_dir}"
 echo "Starting mercury.exe with UI bridge enabled..."
 
 WINEPREFIX="${wine_prefix}" WINEDEBUG="${wine_debug}" \
-    wine "${mercury_exe}" -G -u "${ui_ip}" -U "${ui_base_port}" &
+    wine "${mercury_exe}" -G -U "${ui_port}" &
 mercury_pid=$!
 
 sleep 3
