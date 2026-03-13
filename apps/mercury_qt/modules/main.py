@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtWidgets
 from .connection_info.connection_info import ConnectionInfo
 from .waterfall.waterfall_display import WaterfallDisplay
-from apps.mercury_qt.modules.controls.controls import Controls 
+from apps.mercury_qt.modules.controls.controls import RadioControls 
 
 import core.connection.udp.client as Client_UDP
 
@@ -15,7 +15,7 @@ class Main(QtWidgets.QWidget):
         self.send_port     = base_port + 1
         self.spectrum_port = base_port + 2
         self.connection_info = ConnectionInfo()
-        self.app_controls_view = Controls()
+        self.app_controls_view = RadioControls()
         self.waterfall_display = WaterfallDisplay(spectrum_port=self.spectrum_port)
         self.waterfall_display.setVisible(False)   # shown only when backend has waterfall enabled
         self._waterfall_configured = False          # set once on first status message
@@ -92,10 +92,15 @@ class Main(QtWidgets.QWidget):
     def handle_radio_data(self, data: dict):
         radios = data.get("list", [])
         selected = data.get("selected", "")
+        device_path = data.get("device_path", "")
         ctrl = self.app_controls_view.get_radio_control()
         ctrl.set_options(radios)
         if selected:
             ctrl.set_selected(selected)
+        if device_path:
+            self.app_controls_view.set_device_path_text(device_path)
+        # Restore user's applied selection over backend defaults
+        self.app_controls_view.restore_radio_selection()
 
     def handle_input_channel_data(self, data: dict):
         channels = data.get("list", [])
@@ -118,6 +123,9 @@ class Main(QtWidgets.QWidget):
             if self._waterfall_on:
                 # Start the UDP receiver — backend is already sending spectrum data
                 self.waterfall_display.set_active(True)
+
+            # Request the radio list now that we know the backend is alive
+            self._send_json_command({"command": "get_radio_list"})
 
         # Strip the internal meta-field before passing to widgets
         status = {k: v for k, v in data.items() if k != "waterfall"}
@@ -155,8 +163,8 @@ class Main(QtWidgets.QWidget):
         self.app_controls_view.get_capture_dev_control().command_to_send.connect(self._send_json_command)
         self.app_controls_view.get_playback_dev_control().command_to_send.connect(self._send_json_command)
         self.app_controls_view.get_input_channel_control().command_to_send.connect(self._send_json_command)
-        self.app_controls_view.get_radio_control().command_to_send.connect(self._send_json_command)
-        self.app_controls_view.get_device_path_input().command_to_send.connect(self._send_json_command)
+        # Radio model + device path are sent together via the combined Apply button
+        self.app_controls_view.radio_config_command.connect(self._send_json_command)
 
     @QtCore.Slot(dict)
     def _send_json_command(self, command_dict: dict):
