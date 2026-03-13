@@ -23,8 +23,9 @@ if __name__ == "__main__":
         RECEIVE_PORT   = BASE_PORT
         SEND_PORT      = BASE_PORT + 1
         SPECTRUM_PORT  = BASE_PORT + 2
+        WS_PORT        = BASE_PORT - 1    # WebSocket port (matches C backend)
 
-        print(f"Ports — RECEIVE: {RECEIVE_PORT}, SEND: {SEND_PORT}, SPECTRUM: {SPECTRUM_PORT}")
+        print(f"Ports — RECEIVE: {RECEIVE_PORT}, SEND: {SEND_PORT}, SPECTRUM: {SPECTRUM_PORT}, WS: {WS_PORT}")
         mercury_qt.MercuryQT(base_port=BASE_PORT)
     else:
         tests = test_class.TestClass("HERMES")
