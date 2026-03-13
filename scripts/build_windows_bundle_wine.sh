@@ -9,6 +9,86 @@ bundle_dir="${MERCURY_QT_BUNDLE_DIR:-${repo_root}/deployment}"
 mercury_dir="${MERCURY_QT_MERCURY_DIR:-${repo_root}/../mercury}"
 wine_prefix="${MERCURY_QT_WINE_PREFIX:-${WINEPREFIX:-${repo_root}/../wine-python312}}"
 wine_python="${MERCURY_QT_WINE_PYTHON:-${wine_prefix}/drive_c/Python312/python.exe}"
+app_title="${MERCURY_QT_APP_TITLE:-mercury-qt}"
+
+resolve_path() {
+    local path="$1"
+
+    if [[ "${path}" = /* ]]; then
+        printf '%s\n' "${path}"
+        return
+    fi
+
+    printf '%s\n' "${repo_root}/${path}"
+}
+
+git_short_hash() {
+    local checkout_dir="$1"
+    local checkout_name="$2"
+    local hash
+
+    if ! hash="$(git -C "${checkout_dir}" rev-parse --short=8 HEAD 2>/dev/null)"; then
+        echo "Expected ${checkout_name} git checkout at ${checkout_dir}" >&2
+        exit 1
+    fi
+
+    printf '%s\n' "${hash}"
+}
+
+effective_bundle_dir="${bundle_dir}"
+effective_mercury_dir="${mercury_dir}"
+effective_app_title="${app_title}"
+
+args=("$@")
+arg_index=0
+while ((arg_index < ${#args[@]})); do
+    case "${args[arg_index]}" in
+        --)
+            break
+            ;;
+        --bundle-dir)
+            arg_index=$((arg_index + 1))
+            if ((arg_index >= ${#args[@]})); then
+                echo "Missing value for --bundle-dir" >&2
+                exit 1
+            fi
+            effective_bundle_dir="${args[arg_index]}"
+            ;;
+        --bundle-dir=*)
+            effective_bundle_dir="${args[arg_index]#*=}"
+            ;;
+        --mercury-dir)
+            arg_index=$((arg_index + 1))
+            if ((arg_index >= ${#args[@]})); then
+                echo "Missing value for --mercury-dir" >&2
+                exit 1
+            fi
+            effective_mercury_dir="${args[arg_index]}"
+            ;;
+        --mercury-dir=*)
+            effective_mercury_dir="${args[arg_index]#*=}"
+            ;;
+        --app-title)
+            arg_index=$((arg_index + 1))
+            if ((arg_index >= ${#args[@]})); then
+                echo "Missing value for --app-title" >&2
+                exit 1
+            fi
+            effective_app_title="${args[arg_index]}"
+            ;;
+        --app-title=*)
+            effective_app_title="${args[arg_index]#*=}"
+            ;;
+    esac
+
+    arg_index=$((arg_index + 1))
+done
+
+bundle_dir_abs="$(resolve_path "${effective_bundle_dir}")"
+mercury_dir_abs="$(resolve_path "${effective_mercury_dir}")"
+bundle_runtime_dir="${bundle_dir_abs}/${effective_app_title}.dist"
+bundle_executable="${bundle_runtime_dir}/${effective_app_title}.exe"
+bundle_mercury="${bundle_runtime_dir}/mercury.exe"
 
 usage() {
     cat <<EOF
@@ -22,12 +102,14 @@ Defaults:
   mercury dir:  ${mercury_dir}
   wine prefix:  ${wine_prefix}
   wine python:  ${wine_python}
+  app title:    ${app_title}
 
 Environment overrides:
   MERCURY_QT_BUNDLE_DIR
   MERCURY_QT_MERCURY_DIR
   MERCURY_QT_WINE_PREFIX
   MERCURY_QT_WINE_PYTHON
+  MERCURY_QT_APP_TITLE
   WINEPREFIX
 
 Examples:
@@ -38,6 +120,10 @@ Examples:
 This wrapper reuses scripts/build_windows_bundle.py, so any extra arguments are
 forwarded to that helper unchanged. Provision the Wine prefix first with:
   python3 scripts/setup_wine_python.py /path/to/python-3.12.x-amd64.exe --wine-prefix /path/to/wine-python312
+
+On success the wrapper creates a publishable zip archive in the bundle
+directory named like:
+  mercury-qt-windows-gui-<gui_hash>-mercury-<mercury_hash>.zip
 EOF
 }
 
@@ -52,6 +138,11 @@ if [[ ! -f "${build_script}" ]]; then
     exit 1
 fi
 
+if ! command -v zip >/dev/null 2>&1; then
+    echo "Missing required tool: zip" >&2
+    exit 1
+fi
+
 cmd=(
     python3
     "${build_script}"
@@ -59,7 +150,7 @@ cmd=(
     --mercury-dir "${mercury_dir}"
     --wine-prefix "${wine_prefix}"
     --wine-python "${wine_python}"
-    "$@"
+    "${args[@]}"
 )
 
 printf 'Command:'
@@ -67,3 +158,28 @@ printf ' %q' "${cmd[@]}"
 printf '\n'
 
 "${cmd[@]}"
+
+if [[ ! -d "${bundle_runtime_dir}" ]]; then
+    echo "Expected runtime directory not found: ${bundle_runtime_dir}" >&2
+    exit 1
+fi
+
+for required_file in "${bundle_executable}" "${bundle_mercury}"; do
+    if [[ ! -f "${required_file}" ]]; then
+        echo "Expected bundled file not found: ${required_file}" >&2
+        exit 1
+    fi
+done
+
+gui_hash="$(git_short_hash "${repo_root}" "mercury-qt")"
+mercury_hash="$(git_short_hash "${mercury_dir_abs}" "mercury")"
+archive_name="${effective_app_title}-windows-gui-${gui_hash}-mercury-${mercury_hash}.zip"
+archive_path="${bundle_dir_abs}/${archive_name}"
+
+rm -f "${archive_path}"
+(
+    cd "${bundle_dir_abs}"
+    zip -qr "${archive_name}" "$(basename "${bundle_runtime_dir}")"
+)
+
+echo "Publish this file: ${archive_path}"

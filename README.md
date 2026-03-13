@@ -218,9 +218,11 @@ bash scripts/build_linux_bundle.sh --mode standalone -- --verbose
     bash scripts/build_windows_bundle_wine.sh -- --force --keep-deployment-files
     ```
 
-    Override defaults with `MERCURY_QT_MERCURY_DIR`, `MERCURY_QT_WINE_PREFIX`,
-    `MERCURY_QT_WINE_PYTHON`, and `MERCURY_QT_BUNDLE_DIR`, or call the Python
-    helper directly:
+    That wrapper defaults to the sibling `../mercury` checkout and the Wine
+    Python 3.12 prefix at `../wine-python312`. Override the defaults with
+    `MERCURY_QT_MERCURY_DIR`, `MERCURY_QT_WINE_PREFIX`,
+    `MERCURY_QT_WINE_PYTHON`, `MERCURY_QT_BUNDLE_DIR`, and
+    `MERCURY_QT_APP_TITLE`, or call the Python helper directly:
 
     ```bash
     python3 scripts/build_windows_bundle.py \
@@ -229,8 +231,19 @@ bash scripts/build_linux_bundle.sh --mode standalone -- --verbose
       -- --force --keep-deployment-files
     ```
 
-    The output is `deployment/mercury-qt.dist/mercury-qt.exe` with
-    `mercury.exe` and the required Hamlib DLLs staged alongside.
+    The helper installs the app's Python dependencies in the Wine prefix,
+    stages the ICU runtime from the Cygwin `mingw64-x86_64-icu` package,
+    invokes Nuitka directly under Wine with PE-file dependency scanning,
+    includes the Qt stylesheet assets used at runtime, and produces a
+    standalone runtime directory at `deployment/mercury-qt.dist/`. The GUI
+    launcher ends up at `deployment/mercury-qt.dist/mercury-qt.exe`, with the
+    cross-built `deployment/mercury-qt.dist/mercury.exe` staged next to it
+    together with the extra Hamlib-side DLLs that `mercury` includes in its
+    `make windows-zip` target. The wrapper then zips that runtime directory
+    into a publishable archive named like
+    `deployment/mercury-qt-windows-gui-<gui_hash>-mercury-<mercury_hash>.zip`
+    and prints the full path to that zip at the end. If you have already built
+    `mercury.exe`, pass `--skip-mercury-build`.
 
 3. **Test under Wine:**
 
