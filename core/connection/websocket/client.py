@@ -1,47 +1,48 @@
 """
-Mercury QT WebSocket Client — bidirectional connection to the Mercury C backend.
+Mercury QT WebSocket Client - bidirectional connection to the Mercury C backend.
 
 Connects to the Mercury backend's WSS server (mongoose-based) at:
     wss://<host>:<port>/websocket
 
 Provides the same signal interface as the UDP client so the rest of the
 application can be wired identically:
-    - json_received(dict)          — JSON text messages from the backend
-    - binary_received(bytes)       — raw binary frames (spectrum / waterfall)
-    - connection_lost()            — emitted when the WebSocket closes
-    - connected()                  — emitted when the WebSocket is open
+    - json_received(dict)          - JSON text messages from the backend
+    - binary_received(bytes)       - raw binary frames (spectrum / waterfall)
+    - connection_lost()            - emitted when the WebSocket closes
+    - connected()                  - emitted when the WebSocket is open
 
 Outgoing:
-    - send_json(dict)              — serialise and send a JSON command
-    - send_message(str)            — send a raw text frame
+    - send_json(dict)              - serialise and send a JSON command
+    - send_message(str)            - send a raw text frame
 
 Configuration mirrors the C backend (gui_interface/websocket/mercury_websocket.h):
-    SSL cert : /etc/ssl/certs/hermes.radio.crt
+    Port     : UI_DEFAULT_PORT (10000)
     Endpoint : /websocket
     Max msg  : 8192 bytes
+    SSL      : uses /etc/ssl/certs/hermes.radio.crt
 """
 
 from __future__ import annotations
 
 import json
-import ssl
 import struct
 from typing import Optional
 
 from PySide6.QtCore import QObject, Signal, Slot, QTimer, QUrl
-from PySide6.QtNetwork import QSslConfiguration, QSslCertificate, QSsl
+from PySide6.QtCore import QFile, QIODevice
+from PySide6.QtNetwork import QSslCertificate, QSslConfiguration, QSslSocket
 from PySide6.QtWebSockets import QWebSocket
 
 import numpy as np
 
 
 # ---------------------------------------------------------------------------
-#  Constants — keep in sync with mercury_websocket.h
+#  Constants - keep in sync with mercury_websocket.h
 # ---------------------------------------------------------------------------
-WS_DEFAULT_PORT       = 9999                          # UI_BASE_PORT - 1
+WS_DEFAULT_PORT       = 10000                         # UI_DEFAULT_PORT
 WS_ENDPOINT           = "/websocket"                  # URI path the backend expects
 WS_MAX_MESSAGE_SIZE   = 8192
-SSL_CA_CERT_PATH      = "/etc/ssl/certs/hermes.radio.crt"
+SSL_CERT_PATH         = "/etc/ssl/certs/hermes.radio.crt"
 
 # Reconnect / inactivity
 RECONNECT_INTERVAL_MS = 3000     # retry connection every 3 s
@@ -87,7 +88,7 @@ class WebSocketClient(QObject):
         self._inactivity_timer.setInterval(INACTIVITY_TIMEOUT_MS)
         self._inactivity_timer.timeout.connect(self._on_inactivity_timeout)
 
-        # ---- SSL configuration ----
+        # ---- SSL configuration (skip verification for now) ----
         self._ssl_config = self._build_ssl_config()
 
     # ------------------------------------------------------------------
@@ -114,7 +115,7 @@ class WebSocketClient(QObject):
     def send_json(self, data: dict):
         """Serialise *data* to JSON and send as a text frame."""
         if not self._is_connected:
-            print("[WS] Not connected — cannot send JSON")
+            print("[WS] Not connected - cannot send JSON")
             return
         try:
             message = json.dumps(data)
@@ -125,7 +126,7 @@ class WebSocketClient(QObject):
     def send_message(self, message: str):
         """Send a raw text frame to the backend."""
         if not self._is_connected or self._ws is None:
-            print("[WS] Not connected — cannot send message")
+            print("[WS] Not connected - cannot send message")
             return
         self._ws.sendTextMessage(message)
 
@@ -138,24 +139,22 @@ class WebSocketClient(QObject):
     # ------------------------------------------------------------------
 
     def _build_ssl_config(self) -> QSslConfiguration:
-        """Build an SSL config that trusts the Hermes self-signed CA cert."""
-        config = QSslConfiguration.defaultConfiguration()
+        """Build SSL config for connecting to the Mercury C backend (WSS client).
 
-        try:
-            with open(SSL_CA_CERT_PATH, "rb") as f:
-                pem_data = f.read()
-            certs = QSslCertificate.fromData(pem_data, QSsl.Pem)
+        The cert/key live on the server (the radio).  As a client we only need
+        to trust the server's self-signed certificate.
+        """
+        config = QSslConfiguration.defaultConfiguration()
+        config.setPeerVerifyMode(QSslSocket.PeerVerifyMode.VerifyNone)
+
+        # Optionally add the server cert as a trusted CA (works when the UI
+        # runs on the same host as the radio or the cert has been copied over).
+        cert_file = QFile(SSL_CERT_PATH)
+        if cert_file.open(QIODevice.OpenModeFlag.ReadOnly):
+            certs = QSslCertificate.fromDevice(cert_file)
+            cert_file.close()
             if certs:
-                ca_list = config.caCertificates()
-                ca_list.extend(certs)
-                config.setCaCertificates(ca_list)
-                print(f"[WS] Loaded CA cert from {SSL_CA_CERT_PATH}")
-            else:
-                print(f"[WS] Warning: no certificates parsed from {SSL_CA_CERT_PATH}")
-        except FileNotFoundError:
-            print(f"[WS] Warning: CA cert not found at {SSL_CA_CERT_PATH} — "
-                  "will skip server verification")
-            config.setPeerVerifyMode(QSslConfiguration.PeerVerifyMode.VerifyNone) # type: ignore[attr-defined]
+                config.setCaCertificates(config.caCertificates() + certs)
 
         return config
 
@@ -264,8 +263,8 @@ class WebSocketClient(QObject):
 
     @Slot()
     def _on_inactivity_timeout(self):
-        """No data received for INACTIVITY_TIMEOUT_MS — assume backend is gone."""
+        """No data received for INACTIVITY_TIMEOUT_MS - assume backend is gone."""
         if self._is_connected:
-            print(f"[WS] Inactivity timeout — closing connection")
+            print(f"[WS] Inactivity timeout - closing connection")
             self._ws.close()
             # _on_disconnected will fire and handle the rest

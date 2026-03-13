@@ -1,23 +1,20 @@
 """
 Waterfall Display module for the Mercury QT application.
 
-Wraps the WaterfallWidget and SpectrumProvider into a QGroupBox.
-Shows a live waterfall when a spectrum UDP port is provided, otherwise
-displays a blank (black) screen.
+Wraps the WaterfallWidget into a QGroupBox.
+Spectrum data is fed externally via push_spectrum() (from the WebSocket client).
 """
 
 from PySide6 import QtWidgets
 from PySide6.QtCore import Slot
 from core.components.waterfall_widget import WaterfallWidget
-from core.components.spectrum_provider import SpectrumProvider
 
 
 class WaterfallDisplay(QtWidgets.QWidget):
     """Self-contained waterfall display panel."""
 
-    def __init__(self, parent=None, spectrum_port: int | None = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self._spectrum_port = spectrum_port
 
         # ---- Waterfall widget ----
         self.waterfall = WaterfallWidget(
@@ -25,10 +22,6 @@ class WaterfallDisplay(QtWidgets.QWidget):
             sample_rate=8000,
             history_lines=350,
         )
-
-        # ---- Spectrum data source — live UDP only, no demo ----
-        self.provider = SpectrumProvider(self, udp_port=spectrum_port)
-        self.provider.spectrum_ready.connect(self._on_spectrum)
 
         # ---- Layout inside a GroupBox ----
         self.group_box = QtWidgets.QGroupBox("Waterfall")
@@ -42,15 +35,12 @@ class WaterfallDisplay(QtWidgets.QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(self.group_box)
 
-        self._active = False
-
     # ------------------------------------------------------------------
-    #  Slots
+    #  Public API
     # ------------------------------------------------------------------
 
-    @Slot(object, int)
-    def _on_spectrum(self, power_db, sample_rate: int):
-        """Forward spectrum line (and sample rate) to the waterfall widget."""
+    def push_spectrum(self, power_db, sample_rate: int):
+        """Feed a spectrum line (from the WebSocket client) into the waterfall."""
         self.waterfall.push_spectrum(power_db, sample_rate)
 
     @Slot(dict)
@@ -62,12 +52,3 @@ class WaterfallDisplay(QtWidgets.QWidget):
         sync = data.get("sync")
         if sync is not None:
             self.waterfall.set_sync(bool(sync))
-
-    def set_active(self, enabled: bool):
-        """Start or stop the spectrum UDP receiver."""
-        self._active = enabled
-        if enabled:
-            if self._spectrum_port is not None:
-                self.provider.start()
-        else:
-            self.provider.stop()
