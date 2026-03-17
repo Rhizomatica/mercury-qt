@@ -247,10 +247,10 @@ class WaterfallWidget(QtWidgets.QWidget):
         if lines == 0:
             return img
 
-        # Map rows: bottom of image = most-recent line
+        # Map rows: top of image = most-recent line
         for row_y in range(h):
             # Which history line does this pixel-row correspond to?
-            line_idx_f = (row_y / h) * lines
+            line_idx_f = ((h - 1 - row_y) / h) * lines
             line_idx = int(line_idx_f)
             if line_idx >= lines:
                 line_idx = lines - 1
@@ -284,8 +284,8 @@ class WaterfallWidget(QtWidgets.QWidget):
             idx = self._write_idx
             ordered = np.roll(self._waterfall_data, -idx, axis=0)
 
-        # Resample rows to image height
-        row_indices = np.linspace(0, lines - 1, h).astype(int)
+        # Resample rows to image height (newest line at top → reverse order)
+        row_indices = np.linspace(lines - 1, 0, h).astype(int)
         col_indices = np.linspace(0, n_bins - 1, w).astype(int)
         sampled = ordered[np.ix_(row_indices, col_indices)]
 
