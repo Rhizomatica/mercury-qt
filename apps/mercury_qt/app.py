@@ -9,16 +9,16 @@ UI_DEFAULT_PORT = 10000
 
 class MercuryQT():
 
-    def __init__(self, ws_port=UI_DEFAULT_PORT):
+    def __init__(self, ws_host="127.0.0.1", ws_port=UI_DEFAULT_PORT):
         super().__init__()
 
-        print(f"🚀👾 Starting Mercury Qt App (WS port: {ws_port})...")
+        print(f"🚀👾 Starting Mercury Qt App (WS host: {ws_host}  port: {ws_port})...")
 
         mercury_app = QtWidgets.QApplication([])
         styles = import_styles()
         mercury_app.setStyleSheet(styles)
 
-        widget = Main(ws_port=ws_port)
+        widget = Main(ws_host=ws_host, ws_port=ws_port)
         widget.setWindowTitle("Mercury Qt - Interface")
         widget.resize(960, 640)
         widget.show()

@@ -8,9 +8,10 @@ from core.connection.websocket.client import WebSocketClient
 class Main(QtWidgets.QWidget):
     """Main application widget for Mercury QT Client."""
 
-    def __init__(self, ws_port=10000):
+    def __init__(self, ws_host="127.0.0.1", ws_port=10000):
         super().__init__()
 
+        self.ws_host       = ws_host
         self.ws_port       = ws_port
         self.connection_info = ConnectionInfo()
         self.app_controls_view = RadioControls()
@@ -46,7 +47,7 @@ class Main(QtWidgets.QWidget):
         
     def start_ws_service(self):
         """Create and start the WebSocket client to the Mercury C backend."""
-        self.ws_client = WebSocketClient(port=self.ws_port, parent=self)
+        self.ws_client = WebSocketClient(host=self.ws_host, port=self.ws_port, parent=self)
         # JSON messages
         self.ws_client.json_received.connect(self.handle_json_data)
         self.ws_client.connection_lost.connect(self._handle_ws_connection_lost)
