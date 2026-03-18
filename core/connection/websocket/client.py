@@ -1,8 +1,13 @@
 """
 Mercury QT WebSocket Client - bidirectional connection to the Mercury C backend.
 
-Connects to the Mercury backend's WSS server (mongoose-based) at:
-    wss://<host>:<port>/websocket
+Connects to the Mercury backend at:
+    wss://<host>:<port>/websocket   (tried first)
+    ws://<host>:<port>/websocket    (tried next, and so on)
+
+The client alternates between WSS and WS on every failed attempt until one
+is accepted.  Once connected, the working scheme is kept for the lifetime of
+that connection.  After a clean disconnect the cycle restarts from WSS.
 
 Provides the same signal interface as the UDP client so the rest of the
 application can be wired identically:
@@ -18,7 +23,7 @@ Outgoing:
 Configuration mirrors the C backend (gui_interface/websocket/mercury_websocket.h):
     Port     : UI_DEFAULT_PORT (10000)
     Endpoint : /websocket
-    SSL      : uses /etc/ssl/certs/hermes.radio.crt
+    SSL      : self-signed cert at /etc/ssl/certs/hermes.radio.crt (WSS mode only)
 """
 
 from __future__ import annotations
@@ -74,6 +79,10 @@ class WebSocketClient(QObject):
         self._ws: Optional[QWebSocket] = None
         self._is_connected = False
 
+        # Scheme negotiation: alternate wss → ws → wss → … on every failed
+        # attempt until the backend accepts one.
+        self._current_scheme = "wss"
+
         # ---- Auto-reconnect timer ----
         self._reconnect_timer = QTimer(self)
         self._reconnect_timer.setInterval(RECONNECT_INTERVAL_MS)
@@ -86,7 +95,7 @@ class WebSocketClient(QObject):
         self._inactivity_timer.setInterval(INACTIVITY_TIMEOUT_MS)
         self._inactivity_timer.timeout.connect(self._on_inactivity_timeout)
 
-        # ---- SSL configuration (skip verification for now) ----
+        # ---- SSL configuration (skip verification - server uses self-signed cert) ----
         self._ssl_config = self._build_ssl_config()
 
     # ------------------------------------------------------------------
@@ -94,10 +103,7 @@ class WebSocketClient(QObject):
     # ------------------------------------------------------------------
 
     def start(self):
-        """Create the QWebSocket and initiate the first connection attempt."""
-        if self._ws is not None:
-            return  # already started
-        self._create_socket()
+        """Initiate the first connection attempt to the backend WebSocket server."""
         self._try_connect()
 
     def stop(self):
@@ -158,20 +164,37 @@ class WebSocketClient(QObject):
 
     def _build_url(self) -> QUrl:
         url = QUrl()
-        url.setScheme("wss")
+        url.setScheme(self._current_scheme)
         url.setHost(self._host)
         url.setPort(self._port)
         url.setPath(WS_ENDPOINT)
         return url
 
     def _create_socket(self):
-        """Instantiate a fresh QWebSocket and wire its signals."""
+        """Instantiate a fresh QWebSocket and wire its signals.
+
+        Always called before each connection attempt to guarantee a clean
+        socket state, especially when switching from wss to ws.
+        """
         if self._ws is not None:
+            # Disconnect all signals BEFORE aborting so that the teardown of
+            # the old socket (which emits disconnected/errorOccurred) does not
+            # cascade back into _on_disconnected and trigger spurious reconnects.
+            try:
+                self._ws.connected.disconnect(self._on_connected)
+                self._ws.disconnected.disconnect(self._on_disconnected)
+                self._ws.textMessageReceived.disconnect(self._on_text_message)
+                self._ws.binaryMessageReceived.disconnect(self._on_binary_message)
+                self._ws.errorOccurred.disconnect(self._on_error)
+                self._ws.sslErrors.disconnect(self._on_ssl_errors)
+            except RuntimeError:
+                pass  # already disconnected; safe to ignore
+            self._ws.abort()
             self._ws.deleteLater()
 
         self._ws = QWebSocket("mercury-qt", parent=self)
 
-        # Apply SSL configuration
+        # Apply SSL configuration (only relevant for wss, harmless for ws)
         self._ws.setSslConfiguration(self._ssl_config)
 
         # Qt signals → our slots
@@ -184,13 +207,14 @@ class WebSocketClient(QObject):
 
     @Slot()
     def _try_connect(self):
-        """Attempt to open the WSS connection."""
+        """Attempt to open the WebSocket connection using the current scheme."""
         if self._is_connected:
             return
         url = self._build_url()
         print(f"[WS] Connecting to {url.toString()} ...")
-        if self._ws is None:
-            self._create_socket()
+        # Always create a fresh socket to avoid stale SSL/TCP state, especially
+        # when switching from wss to ws after a failed WSS attempt.
+        self._create_socket()
         self._ws.open(url)
 
     # ------------------------------------------------------------------
@@ -213,6 +237,8 @@ class WebSocketClient(QObject):
         if was_connected:
             print(f"[WS] Disconnected from {self._host}:{self._port}")
             self.connection_lost.emit()
+            # Restart the alternating cycle from WSS after any disconnect following a successful connection.
+            self._current_scheme = "wss"
         # Schedule reconnect attempts
         if not self._reconnect_timer.isActive():
             self._reconnect_timer.start()
@@ -249,7 +275,14 @@ class WebSocketClient(QObject):
     @Slot("QAbstractSocket::SocketError")
     def _on_error(self, error):
         if self._ws:
-            print(f"[WS] Error: {self._ws.errorString()} (code {error})")
+            print(f"[WS] Error ({self._current_scheme}): {self._ws.errorString()} (code {error})")
+
+        # Only toggle scheme for connection/handshake errors, not while connected.
+        if not self._is_connected:
+            # Toggle scheme so the next reconnect attempt tries the other one.
+            next_scheme = "ws" if self._current_scheme == "wss" else "wss"
+            print(f"[WS] {self._current_scheme.upper()} failed - will retry with {next_scheme.upper()}")
+            self._current_scheme = next_scheme
 
     @Slot(list)
     def _on_ssl_errors(self, errors):
