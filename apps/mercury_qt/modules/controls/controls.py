@@ -178,6 +178,18 @@ class RadioControls(QtWidgets.QWidget):
 
     # ---- Public helpers for main.py ----
 
+    def clear_applied_state(self):
+        """Discard remembered selections so the next backend push is used as-is.
+
+        Call this when the backend restarts so stale UI choices don't override
+        the fresh configuration data sent on reconnect.
+        """
+        self._applied_capture_dev = ""
+        self._applied_playback_dev = ""
+        self._applied_input_channel = ""
+        self._applied_radio_model = ""
+        self._applied_device_path = ""
+
     def restore_radio_selection(self):
         """After the radio list is repopulated, restore the previously applied
         selection so it stays in sync with the backend."""

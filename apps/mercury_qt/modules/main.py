@@ -179,6 +179,11 @@ class Main(QtWidgets.QWidget):
     def _handle_ws_connection_lost(self):
         """WebSocket disconnected — reset displayed state."""
         print("[Main] WebSocket disconnected from Mercury backend")
+        # Clear stale applied selections so the fresh config pushed by the
+        # backend on the next reconnect is not overwritten by old UI state.
+        self.app_controls_view.clear_applied_state()
+        # Allow waterfall presence to be re-evaluated from the next status message.
+        self._waterfall_configured = False
         self._handle_connection_lost()
 
     @QtCore.Slot(object, int)
