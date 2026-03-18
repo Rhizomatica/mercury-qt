@@ -18,7 +18,6 @@ Outgoing:
 Configuration mirrors the C backend (gui_interface/websocket/mercury_websocket.h):
     Port     : UI_DEFAULT_PORT (10000)
     Endpoint : /websocket
-    Max msg  : 8192 bytes
     SSL      : uses /etc/ssl/certs/hermes.radio.crt
 """
 
@@ -41,7 +40,6 @@ import numpy as np
 # ---------------------------------------------------------------------------
 WS_DEFAULT_PORT       = 10000                         # UI_DEFAULT_PORT
 WS_ENDPOINT           = "/websocket"                  # URI path the backend expects
-WS_MAX_MESSAGE_SIZE   = 8192
 SSL_CERT_PATH         = "/etc/ssl/certs/hermes.radio.crt"
 
 # Reconnect / inactivity

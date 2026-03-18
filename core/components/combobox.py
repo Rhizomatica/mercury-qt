@@ -22,10 +22,14 @@ class ComboBox(QtWidgets.QWidget):
     @QtCore.Slot(list)
     def set_options(self, options: list):
         """Populate the ComboBox with options.
-        
+
         Each option can be either:
-          - a dict with 'name' and 'id' keys  →  displayed as "name (id)"
-          - a plain string                     →  displayed and used as-is
+          - a dict with the following keys:
+              'display'  (optional) pre-formatted label; takes priority over name/id
+              'name'     human-readable label (used when 'display' is absent)
+              'id'       backend identifier stored as userData
+              Label falls back to "name (id)", or just "id" when name is empty.
+          - a plain string: displayed and used as it's for both label and userData
         """
         self.combo_box.blockSignals(True)
         self.combo_box.clear()
@@ -66,7 +70,7 @@ class ComboBox(QtWidgets.QWidget):
         if value is None:
             value = self.combo_box.currentText()
         
-        if not value:
+        if value is None or value == "":
             return
 
         command = {

@@ -187,11 +187,10 @@ eg. `python3 app.py mercury` ,
 
 a GUI window will appear. This application is designed to:
 
-  * **Receive UDP Messages**: It will listen for incoming UDP datagrams from Mercury on a specified port (e.g., `12345`). Any received messages will be displayed within the GUI.
-  * **Send UDP Messages**: The GUI will provide an input field and a button to compose and send UDP messages to the Mercury system.
+  * **Receive WebSocket Messages**: It will connect to Mercury over a WebSocket endpoint (e.g., `ws://127.0.0.1:10000`) and display any incoming messages within the GUI.
+  * **Send WebSocket Messages**: The GUI will provide an input field and a button to compose and send messages to the Mercury system over the same WebSocket connection.
 
-**Note**: For the application to function correctly, ensure that no other process is using the same UDP port that this application is configured to listen on.
-
+**Note**: For the application to function correctly, ensure that the Mercury process is running and exposing the expected WebSocket endpoint (for example on port `10000`) before starting the GUI.
 
 ## HERMES-MODEM
 

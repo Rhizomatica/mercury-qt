@@ -18,16 +18,12 @@ class RadioControls(QtWidgets.QWidget):
         self.radio_control = ComboBox("radio_model")
 
         # Prevent audio ComboBoxes from auto-sending on selection change
-        self.capture_dev_control.combo_box.currentIndexChanged.disconnect(
-            self.capture_dev_control._on_index_changed)
-        self.playback_dev_control.combo_box.currentIndexChanged.disconnect(
-            self.playback_dev_control._on_index_changed)
-        self.input_channel_control.combo_box.currentIndexChanged.disconnect(
-            self.input_channel_control._on_index_changed)
+        self._disable_auto_emit(self.capture_dev_control)
+        self._disable_auto_emit(self.playback_dev_control)
+        self._disable_auto_emit(self.input_channel_control)
 
         # Prevent the radio ComboBox from auto-sending on selection change
-        self.radio_control.combo_box.currentIndexChanged.disconnect(
-            self.radio_control._on_index_changed)
+        self._disable_auto_emit(self.radio_control)
 
         # Plain QLineEdit for device path
         self.device_path_line_edit = QtWidgets.QLineEdit()
@@ -135,7 +131,7 @@ class RadioControls(QtWidgets.QWidget):
         if idx < 0:
             return ""
         val = control.combo_box.itemData(idx)
-        return str(val) if val else ""
+        return "" if val is None else str(val)
 
     # ---- Apply radio config ----
 
@@ -164,7 +160,21 @@ class RadioControls(QtWidgets.QWidget):
         if idx < 0:
             return ""
         val = self.radio_control.combo_box.itemData(idx)
-        return str(val) if val else ""
+        return "" if val is None else str(val)
+    
+    def _disable_auto_emit(self, control: ComboBox):
+        """Safely disable automatic emission on selection change for a ComboBox.
+        This avoids relying on the presence of a specific internal handler or
+        connection; if either is missing, it simply becomes a no-op.
+        """
+        handler = getattr(control, "_on_index_changed", None)
+        if handler is None:
+            return
+        try:
+            control.combo_box.currentIndexChanged.disconnect(handler)
+        except (TypeError, RuntimeError):
+            # If handler not connected or signal is invalid, treat as a no-op.
+            pass
 
     # ---- Public helpers for main.py ----
 
