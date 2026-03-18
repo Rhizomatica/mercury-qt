@@ -21,10 +21,10 @@ QTabWidget::pane {
 QTabBar::tab {
     background-color: rgb(45, 45, 45);
     color: rgb(230, 230, 230);
-    padding: 8px 16px;
+    padding: 5px 12px;
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
-    font-size: 18px;
+    font-size: 13px;
 }
 
 QTabBar::tab:selected {
@@ -40,11 +40,11 @@ QTabBar::tab:hover {
 QPushButton {
     background-color: rgb(255, 136, 0);
     color: white;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: bold;
     border: none;
-    border-radius: 10px;
-    padding: 10px 20px;
+    border-radius: 8px;
+    padding: 6px 16px;
 }
 
 QPushButton:hover {
@@ -61,8 +61,8 @@ QLineEdit, QTextEdit, QPlainTextEdit {
     color: rgb(230, 230, 230);
     border: 1px solid rgb(70, 70, 70);
     border-radius: 6px;
-    padding: 6px 8px;
-    font-size: 18px;
+    padding: 4px 8px;
+    font-size: 13px;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
@@ -73,23 +73,23 @@ QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
 QGroupBox {
     border: 1px solid rgb(70, 70, 70);
     border-radius: 5px;
-    margin-top: 32px;
+    margin-top: 20px;
     background-color: rgb(40, 40, 40);
-    font-size: 18px;
+    font-size: 13px;
     font-weight: 500;
     color: rgb(230, 230, 230);
-    padding-top: 25px;
+    padding-top: 14px;
 }
 
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 6px 14px;
+    padding: 3px 10px;
     background-color: rgb(255, 136, 0);
     color: #fff;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    font-size: 18px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    font-size: 13px;
     font-weight: bold;
     margin-top: -3px;
 }
@@ -101,9 +101,9 @@ QGroupBox:hover {
 /* ===== Labels and Checkboxes ===== */
 QLabel, QCheckBox, QRadioButton {
     color: rgb(220, 220, 220);
-    font-size: 18px;
+    font-size: 13px;
     background-color: rgb(40, 40, 40);
-    padding: 5px 10px;
+    padding: 2px 6px;
 }
 
 QCheckBox::indicator:checked {
@@ -125,8 +125,8 @@ QComboBox {
     color: rgb(230, 230, 230);
     border: 1px solid rgb(70, 70, 70);
     border-radius: 6px;
-    padding: 6px 8px;
-    font-size: 18px;
+    padding: 4px 8px;
+    font-size: 13px;
 }
 
 QComboBox:hover {
