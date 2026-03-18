@@ -1,3 +1,12 @@
+mercury-qt (0.2.0) unstable; urgency=medium
+
+  * Replace UDP client with QWebSocket client (supports JSON + binary spectrum frames).
+  * Use backend-provided audio/radio lists and send combined commands over WebSocket.
+  * Adjusted waterfall rendering order.
+  * Update Wine bundle run helper.
+
+ -- Rafael Diniz <rafael@rhizomatica.org>  Tue, 18 Mar 2026 12:18:00 +0000
+
 mercury-qt (0.1.0) unstable; urgency=medium
 
   * Add Debian packaging metadata for mercury-qt.
@@ -5,4 +14,4 @@ mercury-qt (0.1.0) unstable; urgency=medium
   * Depend on the Mercury backend and python3-numpy at runtime.
   * Document the Wine-hosted Windows bundle workflow.
 
- -- Rhizomatica Developers <info@rhizomatica.org>  Tue, 10 Mar 2026 21:05:27 +0000
+ -- Rafael Diniz <rafael@rhizomatica.org>  Tue, 10 Mar 2026 21:05:27 +0000
