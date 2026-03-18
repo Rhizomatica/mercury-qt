@@ -87,6 +87,7 @@ class Main(QtWidgets.QWidget):
         ctrl.set_options(devices)
         if selected:
             ctrl.set_selected(selected)
+        self.app_controls_view.restore_audio_selection()
 
     def handle_playback_dev_data(self, data: dict):
         devices = data.get("list", [])
@@ -96,6 +97,7 @@ class Main(QtWidgets.QWidget):
         ctrl.set_options(devices)
         if selected:
             ctrl.set_selected(selected)
+        self.app_controls_view.restore_audio_selection()
 
     def handle_radio_data(self, data: dict):
         radios = data.get("list", [])
@@ -120,6 +122,7 @@ class Main(QtWidgets.QWidget):
         ctrl.set_options(channels)
         if selected:
             ctrl.set_selected(selected)
+        self.app_controls_view.restore_audio_selection()
 
     def _handle_status_data(self, data: dict):
         self._last_status_data = data
@@ -131,9 +134,6 @@ class Main(QtWidgets.QWidget):
             # json.loads returns True/False for JSON true/false; default True if absent
             self._waterfall_on = data.get("waterfall", True)
             self.waterfall_display.setVisible(self._waterfall_on)
-
-            # Request the radio list now that we know the backend is alive
-            self._send_json_command({"command": "get_radio_list"})
 
         # Strip the internal meta-field before passing to widgets
         status = {k: v for k, v in data.items() if k != "waterfall"}
@@ -172,9 +172,8 @@ class Main(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def _handle_ws_connected(self):
-        """WebSocket connected — request radio list from the backend."""
+        """WebSocket connected — backend will push all device/radio lists automatically."""
         print("[Main] WebSocket connected to Mercury backend")
-        self._send_json_command({"command": "get_radio_list"})
 
     @QtCore.Slot()
     def _handle_ws_connection_lost(self):
@@ -189,10 +188,8 @@ class Main(QtWidgets.QWidget):
             self.waterfall_display.push_spectrum(power_db, sample_rate)
 
     def _connect_signals(self):        
-        # CONEXÃO DO SINAL CUSTOMIZADO: Conecta o sinal 'command_to_send' ao handler de envio
-        self.app_controls_view.get_capture_dev_control().command_to_send.connect(self._send_json_command)
-        self.app_controls_view.get_playback_dev_control().command_to_send.connect(self._send_json_command)
-        self.app_controls_view.get_input_channel_control().command_to_send.connect(self._send_json_command)
+        # Audio config (capture/playback/channel) sent together via Apply button
+        self.app_controls_view.audio_config_command.connect(self._send_json_command)
         # Radio model + device path are sent together via the combined Apply button
         self.app_controls_view.radio_config_command.connect(self._send_json_command)
 
