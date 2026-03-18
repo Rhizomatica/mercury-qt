@@ -1,22 +1,21 @@
 from PySide6 import QtCore, QtWidgets
 from .connection_info.connection_info import ConnectionInfo
 from .waterfall.waterfall_display import WaterfallDisplay
-from apps.mercury_qt.modules.controls.controls import Controls 
+from apps.mercury_qt.modules.controls.controls import RadioControls 
 
-import core.connection.udp.client as Client_UDP
+from core.connection.websocket.client import WebSocketClient
 
 class Main(QtWidgets.QWidget):
     """Main application widget for Mercury QT Client."""
 
-    def __init__(self, base_port=10000):
+    def __init__(self, ws_host="127.0.0.1", ws_port=10000):
         super().__init__()
 
-        self.receive_port  = base_port
-        self.send_port     = base_port + 1
-        self.spectrum_port = base_port + 2
+        self.ws_host       = ws_host
+        self.ws_port       = ws_port
         self.connection_info = ConnectionInfo()
-        self.app_controls_view = Controls()
-        self.waterfall_display = WaterfallDisplay(spectrum_port=self.spectrum_port)
+        self.app_controls_view = RadioControls()
+        self.waterfall_display = WaterfallDisplay()
         self.waterfall_display.setVisible(False)   # shown only when backend has waterfall enabled
         self._waterfall_configured = False          # set once on first status message
         self._waterfall_on = False                  # mirrors the backend waterfall flag
@@ -36,21 +35,26 @@ class Main(QtWidgets.QWidget):
         self.main_layout.addLayout(self.left_column, 2)
         self.main_layout.addLayout(self.right_column, 1)
         
-        self.start_udp_service()
+        self.start_ws_service()
         self._connect_signals()
         
 
     def _build_radio_status_group(self) -> QtWidgets.QGroupBox:
-        return self.connection_info.handle_connection_info({"message": "Waiting for UDP data..."})
+        return self.connection_info.handle_connection_info({"message": "Waiting for data..."})
        
     def _build_controls_group(self) -> QtWidgets.QGroupBox:
         return self.app_controls_view
         
-    def start_udp_service(self):
-        self.client = Client_UDP.ClientUDP(receive_port=self.receive_port, send_port=self.send_port)
-        self.client.json_received.connect(self.handle_json_data)
-        self.client.connection_lost.connect(self._handle_connection_lost)
-        self.client.start_udp_client()
+    def start_ws_service(self):
+        """Create and start the WebSocket client to the Mercury C backend."""
+        self.ws_client = WebSocketClient(host=self.ws_host, port=self.ws_port, parent=self)
+        # JSON messages
+        self.ws_client.json_received.connect(self.handle_json_data)
+        self.ws_client.connection_lost.connect(self._handle_ws_connection_lost)
+        self.ws_client.connected.connect(self._handle_ws_connected)
+        # Spectrum binary data — feed directly into waterfall
+        self.ws_client.spectrum_ready.connect(self._on_ws_spectrum)
+        self.ws_client.start()
         
     @QtCore.Slot(dict)
     def handle_json_data(self, data: dict):
@@ -58,7 +62,9 @@ class Main(QtWidgets.QWidget):
         msg_type = data.get("type")
         
         handlers = {
-            "soundcard_list": self.handle_soundcard_data,
+            "capture_dev_list": self.handle_capture_dev_data,
+            "playback_dev_list": self.handle_playback_dev_data,
+            "input_channel": self.handle_input_channel_data,
             "radio_list": self.handle_radio_data,
             "status": self._handle_status_data,
         }
@@ -66,16 +72,57 @@ class Main(QtWidgets.QWidget):
         handler = handlers.get(msg_type)
         if handler:
             handler(data)
+        elif data.get("status") is not None or data.get("error") is not None:
+            # Command ACK/NACK from the backend ({"status":"ok"} or {"error":"..."})
+            if data.get("error"):
+                print(f"[WS] Backend error: {data['error']}")
         else:
             print(f"Unknown message type: {msg_type}")
     
-    def handle_soundcard_data(self, data: dict):
-        soundcards = data.get("list", [])
-        self.app_controls_view.get_soundcard_control().set_options(soundcards)
+    def handle_capture_dev_data(self, data: dict):
+        devices = data.get("list", [])
+        selected = data.get("selected", "")
+        devices.insert(0, {"display": "Default", "id": "default"})
+        ctrl = self.app_controls_view.get_capture_dev_control()
+        ctrl.set_options(devices)
+        if selected:
+            ctrl.set_selected(selected)
+        self.app_controls_view.restore_audio_selection()
+
+    def handle_playback_dev_data(self, data: dict):
+        devices = data.get("list", [])
+        selected = data.get("selected", "")
+        devices.insert(0, {"display": "Default", "id": "default"})
+        ctrl = self.app_controls_view.get_playback_dev_control()
+        ctrl.set_options(devices)
+        if selected:
+            ctrl.set_selected(selected)
+        self.app_controls_view.restore_audio_selection()
 
     def handle_radio_data(self, data: dict):
         radios = data.get("list", [])
-        self.app_controls_view.get_radio_control().set_options(radios)
+        selected = data.get("selected", "")
+        device_path = data.get("device_path", "")
+        ctrl = self.app_controls_view.get_radio_control()
+        ctrl.set_options(radios)
+        if selected:
+            ctrl.set_selected(selected)
+        if device_path:
+            self.app_controls_view.set_device_path_text(device_path)
+        # Restore user's applied selection over backend defaults
+        self.app_controls_view.restore_radio_selection()
+
+    def handle_input_channel_data(self, data: dict):
+        channels = [
+            {"display": ch.capitalize(), "id": ch} if isinstance(ch, str) else ch
+            for ch in data.get("list", [])
+        ]
+        selected = data.get("selected", "")
+        ctrl = self.app_controls_view.get_input_channel_control()
+        ctrl.set_options(channels)
+        if selected:
+            ctrl.set_selected(selected)
+        self.app_controls_view.restore_audio_selection()
 
     def _handle_status_data(self, data: dict):
         self._last_status_data = data
@@ -87,9 +134,6 @@ class Main(QtWidgets.QWidget):
             # json.loads returns True/False for JSON true/false; default True if absent
             self._waterfall_on = data.get("waterfall", True)
             self.waterfall_display.setVisible(self._waterfall_on)
-            if self._waterfall_on:
-                # Start the UDP receiver — backend is already sending spectrum data
-                self.waterfall_display.set_active(True)
 
         # Strip the internal meta-field before passing to widgets
         status = {k: v for k, v in data.items() if k != "waterfall"}
@@ -105,7 +149,7 @@ class Main(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def _handle_connection_lost(self):
-        """Called 2s after the last UDP packet — backend is gone."""
+        """Backend connection lost — reset displayed state."""
         last = getattr(self, '_last_status_data', {})
         # Build a reset dict with the same keys but cleared status values
         reset_data = {k: v for k, v in last.items()}
@@ -122,13 +166,40 @@ class Main(QtWidgets.QWidget):
         else:
             self.connection_info.handle_connection_info(reset_data)
 
+    # ------------------------------------------------------------------
+    #  WebSocket event handlers
+    # ------------------------------------------------------------------
+
+    @QtCore.Slot()
+    def _handle_ws_connected(self):
+        """WebSocket connected — backend will push all device/radio lists automatically."""
+        print("[Main] WebSocket connected to Mercury backend")
+
+    @QtCore.Slot()
+    def _handle_ws_connection_lost(self):
+        """WebSocket disconnected — reset displayed state."""
+        print("[Main] WebSocket disconnected from Mercury backend")
+        # Clear stale applied selections so the fresh config pushed by the
+        # backend on the next reconnect is not overwritten by old UI state.
+        self.app_controls_view.clear_applied_state()
+        # Allow waterfall presence to be re-evaluated from the next status message.
+        self._waterfall_configured = False
+        self._handle_connection_lost()
+
+    @QtCore.Slot(object, int)
+    def _on_ws_spectrum(self, power_db, sample_rate: int):
+        """Forward spectrum data from WebSocket to the waterfall widget."""
+        if self._waterfall_on:
+            self.waterfall_display.push_spectrum(power_db, sample_rate)
+
     def _connect_signals(self):        
-        # CONEXÃO DO SINAL CUSTOMIZADO: Conecta o sinal 'command_to_send' ao handler de envio
-        self.app_controls_view.get_soundcard_control().command_to_send.connect(self._send_json_command)
-        self.app_controls_view.get_radio_control().command_to_send.connect(self._send_json_command)
+        # Audio config (capture/playback/channel) sent together via Apply button
+        self.app_controls_view.audio_config_command.connect(self._send_json_command)
+        # Radio model + device path are sent together via the combined Apply button
+        self.app_controls_view.radio_config_command.connect(self._send_json_command)
 
     @QtCore.Slot(dict)
     def _send_json_command(self, command_dict: dict):
-        """Recebe um dicionário de comando já formatado do ComboBox e o envia via UDP."""
+        """Send a JSON command to the backend via WebSocket."""
         print(f"Sending command: {command_dict}")
-        self.client.send_json(command_dict)
+        self.ws_client.send_json(command_dict)

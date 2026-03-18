@@ -172,7 +172,7 @@ For local Wine testing of an already-built bundle, run:
 bash scripts/run_windows_bundle_wine.sh
 ```
 
-That helper starts `mercury.exe -G -u 127.0.0.1 -U 10000` from
+That helper starts `mercury.exe -G -U 10000` from
 `deployment/mercury-qt.dist/`, then launches `mercury-qt.exe` with the same
 Wine prefix. Override the defaults with `WINEPREFIX=/path/to/prefix` and
 `MERCURY_QT_BUNDLE_DIR=/path/to/mercury-qt.dist` if needed.
@@ -187,11 +187,10 @@ eg. `python3 app.py mercury` ,
 
 a GUI window will appear. This application is designed to:
 
-  * **Receive UDP Messages**: It will listen for incoming UDP datagrams from Mercury on a specified port (e.g., `12345`). Any received messages will be displayed within the GUI.
-  * **Send UDP Messages**: The GUI will provide an input field and a button to compose and send UDP messages to the Mercury system.
+  * **Receive WebSocket Messages**: It will connect to Mercury over a WebSocket endpoint (e.g., `ws://127.0.0.1:10000`) and display any incoming messages within the GUI.
+  * **Send WebSocket Messages**: The GUI will provide an input field and a button to compose and send messages to the Mercury system over the same WebSocket connection.
 
-**Note**: For the application to function correctly, ensure that no other process is using the same UDP port that this application is configured to listen on.
-
+**Note**: For the application to function correctly, ensure that the Mercury process is running and exposing the expected WebSocket endpoint (for example on port `10000`) before starting the GUI.
 
 ## HERMES-MODEM
 
