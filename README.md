@@ -1,209 +1,248 @@
-### README.md
+# Mercury Qt
 
-# Python UDP Communication with Qt GUI for Mercury
+**PySide6 desktop client for monitoring and controlling the
+[Mercury](https://github.com/Rhizomatica/mercury) HF modem.**
 
-This project provides a Python application with a **Qt GUI** (**PySide6**) for interacting with the **Mercury** software. It uses **UDP** for network communication, allowing users to send and receive messages from the Mercury system.
+Mercury Qt connects to the Mercury C backend over a **WebSocket** channel
+(default host/port `127.0.0.1:10000`; the scheme is negotiated automatically). The client first attempts **WSS** and,
+on failure, falls back to **WS**, alternating schemes on every failed attempt until one is accepted. Once connected, the working scheme is kept for the lifetime of that connection.
 
 -----
 
 ## Features
 
-  * **UDP Communication**: Sends and receives UDP datagrams to and from Mercury.
-  * **Qt GUI**: Provides an intuitive graphical interface for interacting with the Mercury software.
-  * **Python 3**: Developed using Python 3.8 or newer.
+* **WebSocket communication** - bidirectional JSON + binary protocol with
+  automatic reconnection, inactivity watchdog, and automatic WSS↔WS scheme
+  alternation until the backend accepts one.
+* **Real-time waterfall display** - scrolling spectrogram with OFDM band
+  overlay, SNR bar, sync indicator, and spectrum graph (20 fps).
+* **Audio device controls** - select capture/playback devices and input channel,
+  applied live to the running backend.
+* **Radio control (Hamlib)** - choose radio model and serial/TCP device path.
+* **Connection status** - User and destination callsigns, bitrate, SNR, sync state, TX/RX direction,
+  and byte counters updated in real time.
+* **Cross-platform** - runs on Linux (native & Debian package) and Windows
+  (Wine-hosted Nuitka bundle).
 
 -----
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed on your system:
-
-  * **Python 3.8 or newer**: This project is developed and tested with Python 3.8+.
-  * **pip**: The Python package installer, usually included with Python.
+* **Python 3.8+**
+* **pip**
+* A running **Mercury** backend exposing its WebSocket server (port `10000` by
+  default). Build Mercury from the parent repository or install the `mercury`
+  Debian package.
 
 -----
 
 ## Installation
 
-Follow these steps to set up and install the project dependencies:
+### From source (development)
 
-1.  **Clone the Repository**:
+```bash
+git clone https://github.com/Rhizomatica/mercury.git
+cd mercury/mercury-qt
 
-    ```bash
-    git clone https://github.com/Rhizomatica/mercury.git
-    cd mercury-qt
-    ```
+python3 -m venv env
+source env/bin/activate      # Windows: .\env\Scripts\activate
 
-2.  **Create and Activate a Virtual Environment**:
-    It's highly recommended to use a virtual environment to manage project dependencies. This isolates your project's dependencies from your system's global Python packages.
+pip install -r requirements.txt   # Install pyside6 and numpy in virtual environment
+```
 
-    ```bash
-    python3 -m venv env
-    source env/bin/activate
-    ```
+### Debian package
 
-    (On Windows, use `.\env\Scripts\activate` instead of `source env/bin/activate`)
+```bash
+dpkg-buildpackage -us -uc -b
+sudo apt install ../mercury-qt_*.deb
+```
 
-3.  **Install Project Dependencies**:
-    With your virtual environment activated, install PySide6 (Qt for Python) using pip:
+The package depends on `mercury`, `python3-numpy`, and the required
+`python3-pyside6.*` modules. After installation the GUI is available as
+`mercury-qt` from the desktop menu or command line.
 
-    ```bash
-    pip install pyside6
-    ```
+-----
+
+## Running
+
+Start the Mercury backend first:
+
+```bash
+# Plain WS (default - no TLS required)
+mercury -G
+
+# WSS (TLS) - requires certificate and key on the server
+mercury -G -T
+```
+
+**Note:** `-G` option is required to enable UI communication.
+
+Then launch the GUI:
+
+```bash
+python3 app.py mercury [--host HOST] [--port PORT]
+```
+
+Defaults: host `127.0.0.1`, port `10000`.
+
+The GUI tries **WSS** first. If that attempt fails the client automatically
+switches to **WS** for the next attempt, then back to **WSS**, and so on,
+alternating on every failure until the backend accepts a connection — no user
+action is needed. Once connected, the working scheme is kept for the lifetime
+of that connection. After a clean disconnect the cycle restarts from WSS.
+
+If installed via the Debian package:
+
+```bash
+mercury-qt
+```
+
+The GUI connects to the backend WebSocket, populates the audio/radio device
+lists, and begins displaying the waterfall and connection status.
 
 -----
 
 ## Configuration
 
-This project assumes default UDP host and port settings, which are typically defined in `app.py`. If you need to modify these, such as the listening port or the target address, please refer to the `app.py` file.
+Connection parameters are passed on the command line. The default WebSocket
+endpoint is `ws://127.0.0.1:10000`, matching Mercury's `UI_DEFAULT_PORT`.
 
-  * **Listening Port**: The port on which the application listens for incoming UDP messages from Mercury.
-  * **Target Host/Port**: The IP address and port to which the application sends UDP messages to Mercury.
+Mercury Qt alternates between WSS and WS on every failed connection attempt
+until the backend accepts one - no manual configuration is needed for the
+connection scheme. To force WSS on the backend side, start Mercury with
+`-G -T`. The required self-signed certificate and key must exist on the server.
+
+Audio and radio settings are configured interactively through the GUI controls
+and sent to the backend as JSON commands.
 
 -----
 
-## Running the Project
+## Project structure
 
-Once you have completed the installation and configuration steps, you can run the application:
+```
+mercury-qt/
+├── app.py                        # Entry point
+├── windows_bundle_entry.py       # Windows launcher stub
+├── requirements.txt              # Python dependencies
+├── apps/
+│   └── mercury_qt/
+│       ├── app.py                # QApplication setup
+│       ├── assets/styles/        # Qt stylesheets
+│       ├── components/           # Reusable UI components
+│       └── modules/
+│           ├── main.py           # Main widget / message router
+│           ├── connection_info/  # Status display
+│           ├── controls/         # Audio & radio controls
+│           └── waterfall/        # Waterfall spectrogram
+├── core/
+│   ├── components/               # Shared widgets (waterfall engine, charts, etc.)
+│   └── connection/websocket/     # QWebSocket client
+├── scripts/                      # Build & bundle helpers
+├── debian/                       # Debian packaging metadata
+├── assets/                       # Branding assets
+└── third_party/                  # Pre-downloaded wheels (Windows)
+```
 
-1.  **Activate your virtual environment (if not already active)**:
+## Backend communication protocol
 
-    ```bash
-    source env/bin/activate
-    ```
+Mercury Qt talks to the Mercury backend over a single WebSocket connection.
 
-2.  **Run the main application file**:
+### JSON messages (text frames)
 
-    ```bash
-    python3 app.py
-    ```
+**Commands sent to backend:**
 
-This command will launch the Qt GUI application, ready to communicate with Mercury.
+| Command | Fields | Description |
+|---------|--------|-------------|
+| `set_audio_config` | `value` (capture device ID), `value2` (playback device ID), `value3` (input channel) | Apply audio device selection |
+| `set_radio_config` | `value` (Hamlib radio model ID), `value2` (device path) | Apply radio/Hamlib settings |
+
+**Status received from backend:**
+
+| Type | Key fields | Description |
+|------|-----------|-------------|
+| `capture_dev_list` | `list`, `selected` | Available capture devices |
+| `playback_dev_list` | `list`, `selected` | Available playback devices |
+| `radio_list` | `list`, `selected` | Available Hamlib radio models |
+| `input_channel` | `list`, `selected` | Input channel options |
+| `status` | `snr`, `sync`, `bitrate`, `direction`, callsigns, byte counters, `waterfall` | Periodic status snapshot |
+
+### Binary frames (spectrum data)
+
+Each binary frame carries one FFT line:
+
+| Offset | Size | Field |
+|--------|------|-------|
+| 0 | 4 B | Magic (`0x4D435259` = "MCRY") |
+| 4 | 2 B | FFT size (uint16) |
+| 6 | 2 B | Sample rate (uint16) |
+| 8 | N×4 B | float32 power values (dB) |
 
 -----
 
 ## Packaging
 
-### Linux (Debian packages)
-
-The repository now includes a `debian/` directory so you can build a Debian
-package with the standard Debian packaging tools, for example:
+### Linux (Debian package)
 
 ```bash
 dpkg-buildpackage -us -uc -b
 ```
 
-The resulting package declares the local `mercury` backend and `python3-numpy`
-as runtime dependencies, matching the current GUI/runtime assumptions.
-
 ### Linux bundle
-
-For a local Linux bundle, use the wrapper below. It rebuilds the sibling
-`../mercury` checkout with `make clean && make -j4`, then stages `mercury`
-next to a bundled GUI runtime:
 
 ```bash
 bash scripts/build_linux_bundle.sh
 ```
 
-By default the wrapper tries a native `pyside6-deploy` standalone build when
-`pyside6-deploy`, `python -m nuitka`, and `patchelf` are already available in
-the selected Python environment. If that standalone toolchain is not available,
-it falls back to a runnable source bundle under `deployment-linux/mercury-qt/`
-with a local `mercury-qt` launcher that uses the selected Python interpreter.
-
-Override the defaults with `MERCURY_QT_LINUX_BUNDLE_DIR`,
-`MERCURY_QT_MERCURY_DIR`, `MERCURY_QT_PYTHON`, `MERCURY_QT_APP_TITLE`, and
-`MERCURY_QT_LINUX_BUNDLE_MODE`, or pass wrapper options such as `--bundle-dir`,
-`--mercury-dir`, `--python`, `--mode`, and `--skip-mercury-build`. Extra
-arguments after `--` are forwarded directly to `pyside6-deploy` when standalone
-mode is selected, for example:
+Modes: `auto` (default), `standalone` (Nuitka binary), or `source` (runnable
+directory with launcher script). Override defaults with `--mode`, `--bundle-dir`,
+`--mercury-dir`, `--python`, `--skip-mercury-build`, etc. Extra arguments after
+`--` are forwarded to `pyside6-deploy` in standalone mode:
 
 ```bash
 bash scripts/build_linux_bundle.sh --mode standalone -- --verbose
 ```
 
-### Windows bundle
+### Windows bundle (cross-built under Wine)
 
-The supported Linux-hosted Windows flow uses a full Windows Python **3.12**
-installation under Wine together with `PySide6` and `Nuitka 2.7.11`. The helper
-below installs that toolchain into a dedicated Wine prefix and stages the ICU
-runtime DLLs from the Cygwin `mingw64-x86_64-icu` package:
+1. **Set up the Wine Python 3.12 environment:**
 
-```bash
-python3 scripts/setup_wine_python.py \
-  /path/to/python-3.12.x-amd64.exe \
-  --wine-prefix /path/to/wine-python312
-```
+    ```bash
+    python3 scripts/setup_wine_python.py \
+      /path/to/python-3.12.x-amd64.exe \
+      --wine-prefix /path/to/wine-python312
+    ```
 
-Once that prefix is ready, build the GUI bundle and stage `mercury.exe` from the
-sibling `../mercury` checkout:
+2. **Build the bundle:**
 
-```bash
-bash scripts/build_windows_bundle_wine.sh -- --force --keep-deployment-files
-```
+    ```bash
+    bash scripts/build_windows_bundle_wine.sh -- --force --keep-deployment-files
+    ```
 
-That wrapper defaults to the sibling `../mercury` checkout and the Wine Python
-3.12 prefix at `../wine-python312`. Override the defaults with
-`MERCURY_QT_MERCURY_DIR`, `MERCURY_QT_WINE_PREFIX`,
-`MERCURY_QT_WINE_PYTHON`, and `MERCURY_QT_BUNDLE_DIR`, or call the Python
-helper directly:
+    Override defaults with `MERCURY_QT_MERCURY_DIR`, `MERCURY_QT_WINE_PREFIX`,
+    `MERCURY_QT_WINE_PYTHON`, and `MERCURY_QT_BUNDLE_DIR`, or call the Python
+    helper directly:
 
-```bash
-python3 scripts/build_windows_bundle.py \
-  --wine-python /path/to/wine-python312/drive_c/Python312/python.exe \
-  --wine-prefix /path/to/wine-python312 \
-  -- --force --keep-deployment-files
-```
+    ```bash
+    python3 scripts/build_windows_bundle.py \
+      --wine-python /path/to/wine-python312/drive_c/Python312/python.exe \
+      --wine-prefix /path/to/wine-python312 \
+      -- --force --keep-deployment-files
+    ```
 
-The helper installs the app's Python dependencies in the Wine prefix, stages
-the ICU runtime from the Cygwin `mingw64-x86_64-icu` package, invokes Nuitka
-directly under Wine with PE-file dependency scanning, includes the Qt
-stylesheet assets used at runtime, and produces a standalone runtime directory
-at `deployment/mercury-qt.dist/`. The GUI launcher ends up at
-`deployment/mercury-qt.dist/mercury-qt.exe`, with the cross-built
-`deployment/mercury-qt.dist/mercury.exe` staged next to it together with the
-extra Hamlib-side DLLs that `mercury` includes in its `make windows-zip`
-target. If you have already built `mercury.exe`, pass `--skip-mercury-build`.
+    The output is `deployment/mercury-qt.dist/mercury-qt.exe` with
+    `mercury.exe` and the required Hamlib DLLs staged alongside.
 
-For local Wine testing of an already-built bundle, run:
+3. **Test under Wine:**
 
-```bash
-bash scripts/run_windows_bundle_wine.sh
-```
-
-That helper starts `mercury.exe -G -U 10000` from
-`deployment/mercury-qt.dist/`, then launches `mercury-qt.exe` with the same
-Wine prefix. Override the defaults with `WINEPREFIX=/path/to/prefix` and
-`MERCURY_QT_BUNDLE_DIR=/path/to/mercury-qt.dist` if needed.
+    ```bash
+    bash scripts/run_windows_bundle_wine.sh
+    ```
 
 -----
 
-## Example Usage
+## License
 
-After running `python3 app.py [app_name]` 
+This project is licensed under the GNU General Public License v3.0 - see
+[LICENSE](../LICENSE) for details.
 
-eg. `python3 app.py mercury` , 
-
-a GUI window will appear. This application is designed to:
-
-  * **Receive WebSocket Messages**: It will connect to Mercury over a WebSocket endpoint (e.g., `ws://127.0.0.1:10000`) and display any incoming messages within the GUI.
-  * **Send WebSocket Messages**: The GUI will provide an input field and a button to compose and send messages to the Mercury system over the same WebSocket connection.
-
-**Note**: For the application to function correctly, ensure that the Mercury process is running and exposing the expected WebSocket endpoint (for example on port `10000`) before starting the GUI.
-
-## HERMES-MODEM
-
-To make the real connection with HERMES-MODEM clone the project from
-
-**GITHUB REPO**
-
-`https://github.com/Rhizomatica/hermes-modem`
-
-
-and run 
-
-```
- ./ui_communication 127.0.0.1 10000 9999
-```
-in /hermes-modem/gui_interface
+Copyright (C) 2025-2026 [Rhizomatica](https://www.rhizomatica.org/)
