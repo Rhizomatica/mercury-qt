@@ -86,7 +86,7 @@ class WebSocketClient(QObject):
         # ---- Auto-reconnect timer ----
         self._reconnect_timer = QTimer(self)
         self._reconnect_timer.setInterval(RECONNECT_INTERVAL_MS)
-        self._reconnect_timer.setSingleShot(False)
+        self._reconnect_timer.setSingleShot(True)   # fires once; rescheduled in _on_disconnected
         self._reconnect_timer.timeout.connect(self._try_connect)
 
         # ---- Inactivity watchdog ----
@@ -94,6 +94,19 @@ class WebSocketClient(QObject):
         self._inactivity_timer.setSingleShot(True)
         self._inactivity_timer.setInterval(INACTIVITY_TIMEOUT_MS)
         self._inactivity_timer.timeout.connect(self._on_inactivity_timeout)
+
+        # ---- Scheme-failure counter ----
+        # Switch scheme only after this many consecutive failures on the same scheme.
+        self._scheme_failures = 0
+        self._max_failures_per_scheme = 2
+
+        # ---- Connection attempt timeout ----
+        # Guards against hangs where Qt never emits errorOccurred / disconnected
+        # (e.g. firewall drops packets, OS TCP timeout is very long).
+        self._connect_timeout = QTimer(self)
+        self._connect_timeout.setSingleShot(True)
+        self._connect_timeout.setInterval(5000)   # 5s to establish a connection
+        self._connect_timeout.timeout.connect(self._on_connect_timeout)
 
         # ---- SSL configuration (skip verification - server uses self-signed cert) ----
         self._ssl_config = self._build_ssl_config()
@@ -180,15 +193,20 @@ class WebSocketClient(QObject):
             # Disconnect all signals BEFORE aborting so that the teardown of
             # the old socket (which emits disconnected/errorOccurred) does not
             # cascade back into _on_disconnected and trigger spurious reconnects.
-            try:
-                self._ws.connected.disconnect(self._on_connected)
-                self._ws.disconnected.disconnect(self._on_disconnected)
-                self._ws.textMessageReceived.disconnect(self._on_text_message)
-                self._ws.binaryMessageReceived.disconnect(self._on_binary_message)
-                self._ws.errorOccurred.disconnect(self._on_error)
-                self._ws.sslErrors.disconnect(self._on_ssl_errors)
-            except RuntimeError:
-                pass  # already disconnected; safe to ignore
+            # Each signal is disconnected individually so a single RuntimeError
+            # does not silently skip the remaining disconnections.
+            for sig, slot in [
+                (self._ws.connected,             self._on_connected),
+                (self._ws.disconnected,           self._on_disconnected),
+                (self._ws.textMessageReceived,    self._on_text_message),
+                (self._ws.binaryMessageReceived,  self._on_binary_message),
+                (self._ws.errorOccurred,          self._on_error),
+                (self._ws.sslErrors,              self._on_ssl_errors),
+            ]:
+                try:
+                    sig.disconnect(slot)
+                except RuntimeError:
+                    pass  # already disconnected; safe to ignore
             self._ws.abort()
             self._ws.deleteLater()
 
@@ -215,6 +233,7 @@ class WebSocketClient(QObject):
         # Always create a fresh socket to avoid stale SSL/TCP state, especially
         # when switching from wss to ws after a failed WSS attempt.
         self._create_socket()
+        self._connect_timeout.start()   # watchdog: forces retry if Qt never signals
         self._ws.open(url)
 
     # ------------------------------------------------------------------
@@ -225,23 +244,27 @@ class WebSocketClient(QObject):
     def _on_connected(self):
         print(f"[WS] Connected to {self._host}:{self._port}")
         self._is_connected = True
+        self._scheme_failures = 0
+        self._connect_timeout.stop()
         self._reconnect_timer.stop()
         self._inactivity_timer.start()
         self.connected.emit()
 
     @Slot()
     def _on_disconnected(self):
+        if self.sender() is not self._ws:
+            return  # stale signal from a replaced socket; ignore
         was_connected = self._is_connected
         self._is_connected = False
+        self._connect_timeout.stop()
         self._inactivity_timer.stop()
         if was_connected:
             print(f"[WS] Disconnected from {self._host}:{self._port}")
             self.connection_lost.emit()
-            # Restart the alternating cycle from WSS after any disconnect following a successful connection.
-            self._current_scheme = "wss"
-        # Schedule reconnect attempts
-        if not self._reconnect_timer.isActive():
-            self._reconnect_timer.start()
+            # Keep the scheme that was working; reset failure count for reconnect.
+            self._scheme_failures = 0
+        # Schedule next reconnect attempt (single-shot, so safe to call unconditionally)
+        self._reconnect_timer.start()
 
     @Slot(str)
     def _on_text_message(self, message: str):
@@ -274,15 +297,65 @@ class WebSocketClient(QObject):
 
     @Slot("QAbstractSocket::SocketError")
     def _on_error(self, error):
+        if self.sender() is not self._ws:
+            return  # stale signal from a replaced socket; ignore
         if self._ws:
             print(f"[WS] Error ({self._current_scheme}): {self._ws.errorString()} (code {error})")
 
-        # Only toggle scheme for connection/handshake errors, not while connected.
-        if not self._is_connected:
-            # Toggle scheme so the next reconnect attempt tries the other one.
+        self._scheme_failures += 1
+        if self._scheme_failures >= self._max_failures_per_scheme:
             next_scheme = "ws" if self._current_scheme == "wss" else "wss"
-            print(f"[WS] {self._current_scheme.upper()} failed - will retry with {next_scheme.upper()}")
+            print(
+                f"[WS] {self._current_scheme.upper()} failed "
+                f"{self._scheme_failures}x - switching to {next_scheme.upper()}"
+            )
             self._current_scheme = next_scheme
+            self._scheme_failures = 0
+        else:
+            print(
+                f"[WS] {self._current_scheme.upper()} failed "
+                f"({self._scheme_failures}/{self._max_failures_per_scheme})"
+            )
+
+    @Slot()
+    def _on_connect_timeout(self):
+        """Fires when a connection attempt doesn't resolve within the timeout.
+
+        This catches hangs where Qt never emits errorOccurred or disconnected
+        (e.g. the OS TCP stack is waiting for a RST/timeout that takes minutes).
+        """
+        if self._is_connected:
+            return
+        print(f"[WS] {self._current_scheme.upper()} connection attempt timed out")
+        # Count as a failure and possibly switch scheme.
+        self._scheme_failures += 1
+        if self._scheme_failures >= self._max_failures_per_scheme:
+            next_scheme = "ws" if self._current_scheme == "wss" else "wss"
+            print(
+                f"[WS] {self._current_scheme.upper()} failed "
+                f"{self._scheme_failures}x - switching to {next_scheme.upper()}"
+            )
+            self._current_scheme = next_scheme
+            self._scheme_failures = 0
+        # Abort the stuck socket; disconnect its signals first so abort() doesn't
+        # cascade into _on_disconnected and trigger a duplicate timer start.
+        if self._ws is not None:
+            for sig, slot in [
+                (self._ws.connected,            self._on_connected),
+                (self._ws.disconnected,          self._on_disconnected),
+                (self._ws.textMessageReceived,   self._on_text_message),
+                (self._ws.binaryMessageReceived, self._on_binary_message),
+                (self._ws.errorOccurred,         self._on_error),
+                (self._ws.sslErrors,             self._on_ssl_errors),
+            ]:
+                try:
+                    sig.disconnect(slot)
+                except RuntimeError:
+                    pass
+            self._ws.abort()
+            self._ws.deleteLater()
+            self._ws = None
+        self._reconnect_timer.start()
 
     @Slot(list)
     def _on_ssl_errors(self, errors):
