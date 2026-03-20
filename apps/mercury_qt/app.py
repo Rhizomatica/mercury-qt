@@ -12,7 +12,7 @@ class MercuryQT():
     def __init__(self, ws_host="127.0.0.1", ws_port=UI_DEFAULT_PORT):
         super().__init__()
 
-        print(f"🚀👾 Starting Mercury Qt App (WS host: {ws_host}  port: {ws_port})...")
+        print(f"=== Starting Mercury Qt App (WS host: {ws_host}  port: {ws_port}) ===")
 
         mercury_app = QtWidgets.QApplication([])
         styles = import_styles()
