@@ -259,7 +259,10 @@ class WebSocketClient(QObject):
         self._connect_timeout.stop()
         self._inactivity_timer.stop()
         if was_connected:
-            print(f"[WS] Disconnected from {self._host}:{self._port}")
+            code = self._ws.closeCode() if self._ws else "N/A"
+            reason = self._ws.closeReason() if self._ws else ""
+            detail = f" (close code={code}" + (f", reason={reason})" if reason else ")")
+            print(f"[WS] Disconnected from {self._host}:{self._port}{detail}")
             self.connection_lost.emit()
             # Keep the scheme that was working; reset failure count for reconnect.
             self._scheme_failures = 0
