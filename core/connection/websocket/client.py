@@ -212,8 +212,10 @@ class WebSocketClient(QObject):
 
         self._ws = QWebSocket("mercury-qt", parent=self)
 
-        # Apply SSL configuration (only relevant for wss, harmless for ws)
-        self._ws.setSslConfiguration(self._ssl_config)
+        # Apply SSL configuration only when using wss to avoid interfering
+        # with plain ws connections on some PySide6 builds.
+        if self._current_scheme == "wss":
+            self._ws.setSslConfiguration(self._ssl_config)
 
         # Qt signals → our slots
         self._ws.connected.connect(self._on_connected)
