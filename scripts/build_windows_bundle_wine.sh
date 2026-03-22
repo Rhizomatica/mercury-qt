@@ -182,9 +182,8 @@ if [[ "${nuitka_dist_dir}" != "${bundle_runtime_dir}" ]]; then
     mv "${nuitka_dist_dir}" "${bundle_runtime_dir}"
 fi
 
-gui_hash="$(git_short_hash "${repo_root}" "mercury-qt")"
-mercury_hash="$(git_short_hash "${mercury_dir_abs}" "mercury")"
-archive_name="${effective_app_title}-${qt_version}-windows-gui-${gui_hash}-mercury-${mercury_hash}.zip"
+mercury_version="$(grep 'define VERSION__' "${mercury_dir_abs}/main.c" | head -1 | sed 's/.*"\(.*\)".*/\1/')"
+archive_name="${effective_app_title}-${qt_version}-mercury-${mercury_version}.zip"
 archive_path="${bundle_dir_abs}/${archive_name}"
 
 rm -f "${archive_path}"
