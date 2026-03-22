@@ -212,8 +212,10 @@ class WebSocketClient(QObject):
 
         self._ws = QWebSocket("mercury-qt", parent=self)
 
-        # Apply SSL configuration (only relevant for wss, harmless for ws)
-        self._ws.setSslConfiguration(self._ssl_config)
+        # Apply SSL configuration only when using wss to avoid interfering
+        # with plain ws connections on some PySide6 builds.
+        if self._current_scheme == "wss":
+            self._ws.setSslConfiguration(self._ssl_config)
 
         # Qt signals → our slots
         self._ws.connected.connect(self._on_connected)
@@ -259,7 +261,10 @@ class WebSocketClient(QObject):
         self._connect_timeout.stop()
         self._inactivity_timer.stop()
         if was_connected:
-            print(f"[WS] Disconnected from {self._host}:{self._port}")
+            code = self._ws.closeCode() if self._ws else "N/A"
+            reason = self._ws.closeReason() if self._ws else ""
+            detail = f" (close code={code}" + (f", reason={reason})" if reason else ")")
+            print(f"[WS] Disconnected from {self._host}:{self._port}{detail}")
             self.connection_lost.emit()
             # Keep the scheme that was working; reset failure count for reconnect.
             self._scheme_failures = 0
