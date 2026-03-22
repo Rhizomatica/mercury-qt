@@ -86,9 +86,14 @@ done
 
 bundle_dir_abs="$(resolve_path "${effective_bundle_dir}")"
 mercury_dir_abs="$(resolve_path "${effective_mercury_dir}")"
-bundle_runtime_dir="${bundle_dir_abs}/${effective_app_title}.dist"
-bundle_executable="${bundle_runtime_dir}/${effective_app_title}.exe"
-bundle_mercury="${bundle_runtime_dir}/mercury.exe"
+# Nuitka output directory (used by the Python helper)
+nuitka_dist_dir="${bundle_dir_abs}/${effective_app_title}.dist"
+bundle_executable="${nuitka_dist_dir}/${effective_app_title}.exe"
+bundle_mercury="${nuitka_dist_dir}/mercury.exe"
+
+# Extract version from debian/changelog for the final directory name
+qt_version="$(head -1 "${repo_root}/debian/changelog" | sed 's/.*(\(.*\)).*/\1/')"
+bundle_runtime_dir="${bundle_dir_abs}/${effective_app_title}-${qt_version}"
 
 usage() {
     cat <<EOF
@@ -159,8 +164,8 @@ printf '\n'
 
 "${cmd[@]}"
 
-if [[ ! -d "${bundle_runtime_dir}" ]]; then
-    echo "Expected runtime directory not found: ${bundle_runtime_dir}" >&2
+if [[ ! -d "${nuitka_dist_dir}" ]]; then
+    echo "Expected runtime directory not found: ${nuitka_dist_dir}" >&2
     exit 1
 fi
 
@@ -171,9 +176,15 @@ for required_file in "${bundle_executable}" "${bundle_mercury}"; do
     fi
 done
 
+# Rename Nuitka's .dist directory to the versioned name
+if [[ "${nuitka_dist_dir}" != "${bundle_runtime_dir}" ]]; then
+    rm -rf "${bundle_runtime_dir}"
+    mv "${nuitka_dist_dir}" "${bundle_runtime_dir}"
+fi
+
 gui_hash="$(git_short_hash "${repo_root}" "mercury-qt")"
 mercury_hash="$(git_short_hash "${mercury_dir_abs}" "mercury")"
-archive_name="${effective_app_title}-windows-gui-${gui_hash}-mercury-${mercury_hash}.zip"
+archive_name="${effective_app_title}-${qt_version}-windows-gui-${gui_hash}-mercury-${mercury_hash}.zip"
 archive_path="${bundle_dir_abs}/${archive_name}"
 
 rm -f "${archive_path}"
