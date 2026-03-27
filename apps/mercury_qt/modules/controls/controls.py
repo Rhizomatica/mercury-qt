@@ -140,12 +140,15 @@ class RadioControls(QtWidgets.QWidget):
         model_id = self._get_selected_radio_id()
         device_path = self.device_path_line_edit.text().strip()
 
-        if not model_id or not device_path:
-            return  # both fields required
+        if not model_id:
+            return
 
         # Persist the applied values for later restoration
         self._applied_radio_model = model_id
         self._applied_device_path = device_path
+
+        if model_id == "-1":
+            self.device_path_line_edit.clear()
 
         command = {
             "command": "set_radio_config",
