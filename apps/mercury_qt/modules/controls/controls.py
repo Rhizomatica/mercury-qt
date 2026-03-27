@@ -1,4 +1,4 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
 from core.components.combobox import ComboBox
 
 class RadioControls(QtWidgets.QWidget):
@@ -8,6 +8,8 @@ class RadioControls(QtWidgets.QWidget):
     radio_config_command = QtCore.Signal(dict)
     # Signal emitted when audio Apply is clicked with capture/playback/channel
     audio_config_command = QtCore.Signal(dict)
+    # Signal emitted when the Connect button is clicked with valid host and port
+    connect_requested = QtCore.Signal(str, int)
 
     def __init__(self):
         super().__init__()
@@ -48,6 +50,21 @@ class RadioControls(QtWidgets.QWidget):
         # Track applied values so backend refreshes don't lose user choices
         self._applied_radio_model = ""
         self._applied_device_path = ""
+
+        # Host / Port / Connect
+        self.host_line_edit = QtWidgets.QLineEdit()
+        self.host_line_edit.setMaxLength(255)
+        self.host_line_edit.setPlaceholderText("127.0.0.1")
+
+        self.port_line_edit = QtWidgets.QLineEdit()
+        self.port_line_edit.setMaxLength(5)
+        self.port_line_edit.setPlaceholderText("10000")
+        self.port_line_edit.setValidator(QtGui.QIntValidator(1, 65535, self))
+
+        self.connect_button = QtWidgets.QPushButton("Connect")
+        self.connect_button.clicked.connect(self._on_connect_clicked)
+        self.host_line_edit.returnPressed.connect(self._on_connect_clicked)
+        self.port_line_edit.returnPressed.connect(self._on_connect_clicked)
 
         controls_layout = QtWidgets.QVBoxLayout()
 
@@ -93,6 +110,24 @@ class RadioControls(QtWidgets.QWidget):
         hamlib_box.setLayout(hamlib_layout)
 
         controls_layout.addWidget(hamlib_box)
+
+        # Connection section
+        connection_layout = QtWidgets.QVBoxLayout()
+
+        host_label = QtWidgets.QLabel("Host")
+        connection_layout.addWidget(host_label)
+        connection_layout.addWidget(self.host_line_edit)
+
+        port_label = QtWidgets.QLabel("Port")
+        connection_layout.addWidget(port_label)
+        connection_layout.addWidget(self.port_line_edit)
+
+        connection_layout.addWidget(self.connect_button)
+
+        connection_box = QtWidgets.QGroupBox()
+        connection_box.setLayout(connection_layout)
+
+        controls_layout.addWidget(connection_box)
 
         controls_layout.addStretch()
 
@@ -193,6 +228,15 @@ class RadioControls(QtWidgets.QWidget):
         self._applied_radio_model = ""
         self._applied_device_path = ""
 
+    def reset_controls(self):
+        """Clear all dropdowns and text fields so no stale UI state remains."""
+        for ctrl in (self.capture_dev_control, self.playback_dev_control,
+                     self.input_channel_control, self.radio_control):
+            ctrl.combo_box.blockSignals(True)
+            ctrl.combo_box.clear()
+            ctrl.combo_box.blockSignals(False)
+        self.device_path_line_edit.clear()
+
     def restore_radio_selection(self):
         """After the radio list is repopulated, restore the previously applied
         selection so it stays in sync with the backend."""
@@ -227,3 +271,20 @@ class RadioControls(QtWidgets.QWidget):
 
     def get_input_channel_control(self) -> ComboBox:
         return self.input_channel_control
+
+    def set_connection_defaults(self, host: str, port: int):
+        """Populate the Host and Port fields with initial values."""
+        self.host_line_edit.setText(host)
+        self.port_line_edit.setText(str(port))
+
+    def _on_connect_clicked(self):
+        """Validate host and port fields, then emit connect_requested."""
+        host = self.host_line_edit.text().strip()
+        port_text = self.port_line_edit.text().strip()
+        if not host or not port_text:
+            return
+        try:
+            port = int(port_text)
+        except ValueError:
+            return
+        self.connect_requested.emit(host, port)

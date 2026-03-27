@@ -8,11 +8,13 @@ from core.connection.websocket.client import WebSocketClient
 class Main(QtWidgets.QWidget):
     """Main application widget for Mercury QT Client."""
 
-    def __init__(self, ws_host="127.0.0.1", ws_port=10000):
+    def __init__(self, ws_host="127.0.0.1", ws_port=10000, auto_start=False):
         super().__init__()
 
         self.ws_host       = ws_host
         self.ws_port       = ws_port
+        self._auto_start   = auto_start
+        self.ws_client     = None
         self.connection_info = ConnectionInfo()
         self.app_controls_view = RadioControls()
         self.waterfall_display = WaterfallDisplay()
@@ -34,10 +36,12 @@ class Main(QtWidgets.QWidget):
         # --- Final layout ---
         self.main_layout.addLayout(self.left_column, 2)
         self.main_layout.addLayout(self.right_column, 1)
-        
-        self.start_ws_service()
+
         self._connect_signals()
-        
+        self.app_controls_view.set_connection_defaults(ws_host, ws_port)
+
+        if self._auto_start:
+            QtCore.QTimer.singleShot(0, self.start_ws_service)
 
     def _build_radio_status_group(self) -> QtWidgets.QGroupBox:
         return self.connection_info.handle_connection_info({"message": "Waiting for data..."})
@@ -197,9 +201,31 @@ class Main(QtWidgets.QWidget):
         self.app_controls_view.audio_config_command.connect(self._send_json_command)
         # Radio model + device path are sent together via the combined Apply button
         self.app_controls_view.radio_config_command.connect(self._send_json_command)
+        # Host/port Connect button
+        self.app_controls_view.connect_requested.connect(self._on_connect_requested)
+
+    @QtCore.Slot(str, int)
+    def _on_connect_requested(self, host: str, port: int):
+        """Stop any existing connection and reconnect with the supplied host/port."""
+        if self.ws_client is not None:
+            self.ws_client.stop()
+            self.ws_client.deleteLater()
+            self.ws_client = None
+
+        # Wipe stale UI state so fresh backend data is shown as-is
+        self.app_controls_view.clear_applied_state()
+        self.app_controls_view.reset_controls()
+        self._waterfall_configured = False
+
+        self.ws_host = host
+        self.ws_port = port
+        self.start_ws_service()
 
     @QtCore.Slot(dict)
     def _send_json_command(self, command_dict: dict):
         """Send a JSON command to the backend via WebSocket."""
+        if self.ws_client is None:
+            print("[Main] Not connected - cannot send command")
+            return
         print(f"Sending command: {command_dict}")
         self.ws_client.send_json(command_dict)
