@@ -40,6 +40,8 @@ class ComboBox(QtWidgets.QWidget):
                 dev_id = opt.get("id", "")
                 if display:
                     display_text = display
+                elif name and str(dev_id) == "-1":
+                    display_text = name
                 else:
                     display_text = f"{name} ({dev_id})" if name else dev_id
                 self.combo_box.addItem(display_text, userData=dev_id)
