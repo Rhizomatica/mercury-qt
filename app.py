@@ -16,10 +16,11 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser(prog="app.py mercury")
         parser.add_argument("--host", default="127.0.0.1", help="WebSocket host (default: 127.0.0.1)")
         parser.add_argument("--port", type=int, default=10000, help="WebSocket port (default: 10000)")
+        parser.add_argument("--auto-start", action="store_true", help="Automatically connect to the remote host on startup")
         args = parser.parse_args(sys.argv[2:])
 
-        print(f"WebSocket host: {args.host}  port: {args.port}")
-        mercury_qt.MercuryQT(ws_host=args.host, ws_port=args.port)
+        print(f"WebSocket host: {args.host}  port: {args.port}  auto-start: {args.auto_start}")
+        mercury_qt.MercuryQT(ws_host=args.host, ws_port=args.port, auto_start=args.auto_start)
     else:
         tests = test_class.TestClass("HERMES")
         tests.start_mercury_qt_app()
