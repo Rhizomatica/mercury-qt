@@ -1,3 +1,14 @@
+mercury-qt (0.2.1) unstable; urgency=medium
+
+  * Allow setting host and port via the GUI.
+  * Auto-negotiate WSS/WS on connection failure.
+  * Only apply SSL config on wss:// connections.
+  * Handle 'none' radio type from backend.
+  * Include MSVC runtime DLLs in Windows bundle.
+  * Use versioned directory name in Windows bundle zip.
+
+ -- Rafael Diniz <rafael@rhizomatica.org>  Sat, 29 Mar 2026 12:00:00 +0000
+
 mercury-qt (0.2.0) unstable; urgency=medium
 
   * Replace UDP client with QWebSocket client (supports JSON + binary spectrum frames).
