@@ -625,6 +625,33 @@ def finalize_wine_bundle_output(
         if stale_path.exists():
             stale_path.unlink()
 
+    # Copy MSVC runtime DLLs from subdirectories (shiboken6/, PySide6/, etc.) to
+    # the bundle root so that all modules can find them.  Nuitka places some MSVC
+    # DLLs only next to the shiboken6 bindings, but Qt6Core.dll in the root also
+    # needs them.  Wine provides these built-in; real Windows does not.
+    promote_msvc_runtime_dlls(target_runtime_dir)
+
+
+MSVC_RUNTIME_PATTERNS = (
+    "msvcp140*.dll",
+    "vcruntime140*.dll",
+    "concrt140*.dll",
+    "ucrtbase*.dll",
+)
+
+
+def promote_msvc_runtime_dlls(runtime_dir: Path) -> None:
+    if not runtime_dir.is_dir():
+        return
+    for pattern in MSVC_RUNTIME_PATTERNS:
+        for dll in runtime_dir.rglob(pattern):
+            if dll.parent == runtime_dir:
+                continue
+            target = runtime_dir / dll.name
+            if not target.exists():
+                print(f"Promoting MSVC runtime DLL: {dll.relative_to(runtime_dir)} -> {dll.name}")
+                shutil.copy2(dll, target)
+
 
 def main():
     args = parse_args()
