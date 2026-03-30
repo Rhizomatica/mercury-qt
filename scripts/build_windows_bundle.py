@@ -293,34 +293,22 @@ def get_pyside_package_dir(wine_python: Path) -> Path:
 def collect_wine_support_files(wine_python: Path) -> list[Path]:
     pyside_dir = get_pyside_package_dir(wine_python)
 
-    # MinGW runtime DLLs (always required for the cross-compiled bundle)
-    required_files = [
-        pyside_dir / "libgcc_s_seh-1.dll",
-        pyside_dir / "libstdc++-6.dll",
+    # Collect optional runtime DLLs that PySide6 may ship depending on the Qt build.
+    # Qt 6.8 LTS (MSVC): no MinGW or ICU DLLs needed.
+    # Qt 6.10+ (MinGW/ICU): needs libgcc_s_seh-1.dll, libstdc++-6.dll, and ICU DLLs.
+    optional_dlls = [
+        "libgcc_s_seh-1.dll",
+        "libstdc++-6.dll",
+        "icuuc.dll",
+        "icuin.dll",
+        "icudt.dll",
+        "icuuc57.dll",
+        "icui18n57.dll",
+        "icudata57.dll",
     ]
 
-    # ICU DLLs: only needed if Qt was built with external ICU (Qt 6.10+).
-    # Qt 6.8 LTS uses Windows built-in Unicode support and has no ICU dependency.
-    icu_files = [
-        pyside_dir / "icuuc.dll",
-        pyside_dir / "icuin.dll",
-        pyside_dir / "icudt.dll",
-        pyside_dir / "icuuc57.dll",
-        pyside_dir / "icui18n57.dll",
-        pyside_dir / "icudata57.dll",
-    ]
-    icu_present = [f for f in icu_files if f.exists()]
-    if icu_present:
-        required_files.extend(icu_present)
-
-    missing = [path.name for path in required_files if not path.exists()]
-    if missing:
-        raise RuntimeError(
-            "The Wine PySide6 runtime is missing support DLLs needed for the Windows bundle: "
-            + ", ".join(missing)
-        )
-
-    return required_files
+    support_files = [pyside_dir / name for name in optional_dlls if (pyside_dir / name).exists()]
+    return support_files
 
 
 def infer_default_spec(wine_python: Path, wine_deploy: Path) -> Path:

@@ -290,8 +290,9 @@ def main():
         python_runtime,
         "-c",
         "import sys; import PySide6; import nuitka; from PySide6 import QtWidgets; "
+        "from nuitka.Version import getNuitkaVersion; "
         "print(sys.version); print('PySide6', PySide6.__version__); "
-        "print('Nuitka', nuitka.__version__); print('QtWidgets', QtWidgets.__name__)",
+        "print('Nuitka', getNuitkaVersion()); print('QtWidgets', QtWidgets.__name__)",
     ]
     verify_status = run_command(
         verify_command,
