@@ -14,7 +14,7 @@ from pathlib import Path
 
 DEFAULT_TARGET_DIR = r"C:\Python312"
 DEFAULT_PACKAGES = [
-    "PySide6==6.10.2",
+    "PySide6==6.8.3",
     "numpy",
     "ordered-set",
     "packaging",
@@ -84,7 +84,14 @@ def parse_args():
     parser.add_argument(
         "--skip-cygwin-icu",
         action="store_true",
-        help="Skip staging ICU DLLs from the Cygwin mingw64-x86_64-icu package.",
+        default=True,
+        help="Skip staging ICU DLLs from the Cygwin mingw64-x86_64-icu package (default: skip).",
+    )
+    parser.add_argument(
+        "--cygwin-icu",
+        action="store_false",
+        dest="skip_cygwin_icu",
+        help="Stage ICU DLLs from Cygwin (needed for PySide6 6.10+ / Qt 6.10+).",
     )
     return parser.parse_args()
 

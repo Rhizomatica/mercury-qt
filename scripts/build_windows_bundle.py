@@ -292,16 +292,26 @@ def get_pyside_package_dir(wine_python: Path) -> Path:
 
 def collect_wine_support_files(wine_python: Path) -> list[Path]:
     pyside_dir = get_pyside_package_dir(wine_python)
+
+    # MinGW runtime DLLs (always required for the cross-compiled bundle)
     required_files = [
+        pyside_dir / "libgcc_s_seh-1.dll",
+        pyside_dir / "libstdc++-6.dll",
+    ]
+
+    # ICU DLLs: only needed if Qt was built with external ICU (Qt 6.10+).
+    # Qt 6.8 LTS uses Windows built-in Unicode support and has no ICU dependency.
+    icu_files = [
         pyside_dir / "icuuc.dll",
         pyside_dir / "icuin.dll",
         pyside_dir / "icudt.dll",
         pyside_dir / "icuuc57.dll",
         pyside_dir / "icui18n57.dll",
         pyside_dir / "icudata57.dll",
-        pyside_dir / "libgcc_s_seh-1.dll",
-        pyside_dir / "libstdc++-6.dll",
     ]
+    icu_present = [f for f in icu_files if f.exists()]
+    if icu_present:
+        required_files.extend(icu_present)
 
     missing = [path.name for path in required_files if not path.exists()]
     if missing:
@@ -641,6 +651,11 @@ MSVC_RUNTIME_PATTERNS = (
 
 
 def promote_msvc_runtime_dlls(runtime_dir: Path) -> None:
+    """Copy MSVC runtime DLLs from PySide6/shiboken6 subdirectories to the
+    bundle root.  PySide6's copies must win because they match the Visual
+    Studio version that Qt and the PySide6 bindings were built with.  Nuitka
+    may have already placed CPython's copies (a different VS version) in the
+    root, so we overwrite unconditionally."""
     if not runtime_dir.is_dir():
         return
     for pattern in MSVC_RUNTIME_PATTERNS:
@@ -648,9 +663,14 @@ def promote_msvc_runtime_dlls(runtime_dir: Path) -> None:
             if dll.parent == runtime_dir:
                 continue
             target = runtime_dir / dll.name
-            if not target.exists():
+            if target.exists() and target.stat().st_size != dll.stat().st_size:
+                print(f"Replacing MSVC runtime DLL: {dll.relative_to(runtime_dir)} -> {dll.name} "
+                      f"(root={target.stat().st_size}B, pyside={dll.stat().st_size}B)")
+            elif not target.exists():
                 print(f"Promoting MSVC runtime DLL: {dll.relative_to(runtime_dir)} -> {dll.name}")
-                shutil.copy2(dll, target)
+            else:
+                continue
+            shutil.copy2(dll, target)
 
 
 def main():
