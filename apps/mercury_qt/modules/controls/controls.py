@@ -33,6 +33,15 @@ class RadioControls(QtWidgets.QWidget):
         self.device_path_line_edit.setPlaceholderText(
             "/dev/ttyUSB0 or 127.0.0.1:4532")
 
+        # Baud Rate ComboBox (fixed options, no auto-emit needed)
+        self.baud_rate_control = QtWidgets.QComboBox()
+        self.baud_rate_control.addItem("Auto", "0")
+        self.baud_rate_control.addItem("4800", "4800")
+        self.baud_rate_control.addItem("9600", "9600")
+        self.baud_rate_control.addItem("19200", "19200")
+        self.baud_rate_control.addItem("38400", "38400")
+        self.baud_rate_control.addItem("115200", "115200")
+
         # Apply button for audio config (capture/playback/channel)
         self.audio_apply_button = QtWidgets.QPushButton("Apply")
         self.audio_apply_button.clicked.connect(self._on_audio_apply)
@@ -50,6 +59,7 @@ class RadioControls(QtWidgets.QWidget):
         # Track applied values so backend refreshes don't lose user choices
         self._applied_radio_model = ""
         self._applied_device_path = ""
+        self._applied_baud_rate = ""
 
         # Host / Port / Connect
         self.host_line_edit = QtWidgets.QLineEdit()
@@ -103,6 +113,10 @@ class RadioControls(QtWidgets.QWidget):
         device_path_label = QtWidgets.QLabel("Device Path")
         hamlib_layout.addWidget(device_path_label)
         hamlib_layout.addWidget(self.device_path_line_edit)
+
+        baud_rate_label = QtWidgets.QLabel("Baud Rate")
+        hamlib_layout.addWidget(baud_rate_label)
+        hamlib_layout.addWidget(self.baud_rate_control)
 
         hamlib_layout.addWidget(self.radio_apply_button)
 
@@ -171,9 +185,10 @@ class RadioControls(QtWidgets.QWidget):
     # ---- Apply radio config ----
 
     def _on_radio_apply(self):
-        """Send combined radio model + device path to the backend."""
+        """Send combined radio model + device path + baud rate to the backend."""
         model_id = self._get_selected_radio_id()
         device_path = self.device_path_line_edit.text().strip()
+        baud_rate = self.baud_rate_control.currentData() or "0"
 
         if not model_id:
             return
@@ -181,6 +196,7 @@ class RadioControls(QtWidgets.QWidget):
         # Persist the applied values for later restoration
         self._applied_radio_model = model_id
         self._applied_device_path = device_path
+        self._applied_baud_rate = baud_rate
 
         if model_id == "-1":
             self.device_path_line_edit.clear()
@@ -189,6 +205,7 @@ class RadioControls(QtWidgets.QWidget):
             "command": "set_radio_config",
             "value": model_id,
             "value2": device_path,
+            "value3": baud_rate,
         }
         self.radio_config_command.emit(command)
 
@@ -227,6 +244,7 @@ class RadioControls(QtWidgets.QWidget):
         self._applied_input_channel = ""
         self._applied_radio_model = ""
         self._applied_device_path = ""
+        self._applied_baud_rate = ""
 
     def reset_controls(self):
         """Clear all dropdowns and text fields so no stale UI state remains."""
@@ -236,6 +254,7 @@ class RadioControls(QtWidgets.QWidget):
             ctrl.combo_box.clear()
             ctrl.combo_box.blockSignals(False)
         self.device_path_line_edit.clear()
+        self.baud_rate_control.setCurrentIndex(0)
 
     def restore_radio_selection(self):
         """After the radio list is repopulated, restore the previously applied
@@ -244,6 +263,8 @@ class RadioControls(QtWidgets.QWidget):
             self.radio_control.set_selected(self._applied_radio_model)
         if self._applied_device_path:
             self.device_path_line_edit.setText(self._applied_device_path)
+        if self._applied_baud_rate:
+            self.set_baud_rate(self._applied_baud_rate)
 
     def restore_audio_selection(self):
         """After device lists are repopulated, restore the previously applied
@@ -259,6 +280,12 @@ class RadioControls(QtWidgets.QWidget):
         """Set device path without triggering signals (initial sync)."""
         if not self._applied_device_path:
             self.device_path_line_edit.setText(text)
+
+    def set_baud_rate(self, value: str):
+        """Set baud rate ComboBox by value string (e.g. '0', '9600')."""
+        idx = self.baud_rate_control.findData(value)
+        if idx >= 0:
+            self.baud_rate_control.setCurrentIndex(idx)
 
     def get_radio_control(self) -> ComboBox:
         return self.radio_control

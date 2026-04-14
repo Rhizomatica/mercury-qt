@@ -107,12 +107,15 @@ class Main(QtWidgets.QWidget):
         radios = data.get("list", [])
         selected = data.get("selected", "")
         device_path = data.get("device_path", "")
+        serial_speed = data.get("serial_speed")
         ctrl = self.app_controls_view.get_radio_control()
         ctrl.set_options(radios)
         if selected:
             ctrl.set_selected(selected)
         if device_path:
             self.app_controls_view.set_device_path_text(device_path)
+        if serial_speed is not None:
+            self.app_controls_view.set_baud_rate(str(serial_speed))
         # Restore user's applied selection over backend defaults
         self.app_controls_view.restore_radio_selection()
 
