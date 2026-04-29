@@ -48,7 +48,7 @@ linux-bundle:
 	@echo "Building Linux source bundle: $(BUNDLE_RUNTIME)"
 	rm -rf "$(BUNDLE_RUNTIME)"
 	mkdir -p "$(BUNDLE_RUNTIME)"
-	cp -a app.py requirements.txt apps assets core modules "$(BUNDLE_RUNTIME)/"
+	cp -a app.py requirements.txt apps assets core "$(BUNDLE_RUNTIME)/"
 	find "$(BUNDLE_RUNTIME)" -type d -name '__pycache__' -prune -exec rm -rf {} +
 	printf '#!/usr/bin/env bash\nset -euo pipefail\nscript_dir="$$(cd -- "$$(dirname -- "$${BASH_SOURCE[0]}")" && pwd)"\npython_bin="$${MERCURY_QT_PYTHON:-$(PYTHON)}"\nexport PYTHONPATH="$${script_dir}"\nexec "$${python_bin}" "$${script_dir}/app.py" mercury "$$@"\n' > "$(BUNDLE_RUNTIME)/$(APP_TITLE)"
 	chmod +x "$(BUNDLE_RUNTIME)/$(APP_TITLE)"
@@ -56,8 +56,10 @@ linux-bundle:
 
 install: linux-bundle
 	install -d $(DESTDIR)$(datadir)/$(APP_TITLE)
+	install -d $(DESTDIR)$(bindir)
 	cp -a $(BUNDLE_RUNTIME)/* $(DESTDIR)$(datadir)/$(APP_TITLE)/
-	install -D -m 755 $(BUNDLE_RUNTIME)/$(APP_TITLE) $(DESTDIR)$(bindir)/$(APP_TITLE)
+	printf '#!/usr/bin/env bash\nset -euo pipefail\napp_dir="$(datadir)/$(APP_TITLE)"\npython_bin="$${MERCURY_QT_PYTHON:-$(PYTHON)}"\nexport PYTHONPATH="$${app_dir}"\nexec "$${python_bin}" "$${app_dir}/app.py" mercury "$$@"\n' > "$(DESTDIR)$(bindir)/$(APP_TITLE)"
+	chmod 755 "$(DESTDIR)$(bindir)/$(APP_TITLE)"
 
 # ---- Windows Nuitka standalone bundle (run from MSYS2/MinGW64 shell) ----
 windows:

@@ -177,7 +177,7 @@ build_source_bundle() {
     rm -rf "$runtime_dir"
     mkdir -p "$runtime_dir"
 
-    for entry in app.py requirements.txt apps assets core modules; do
+    for entry in app.py requirements.txt apps assets core; do
         cp -a "${repo_root}/${entry}" "$runtime_dir/"
     done
 
