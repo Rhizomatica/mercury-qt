@@ -1,3 +1,9 @@
+mercury-qt (0.3.0) unstable; urgency=medium
+
+  * Add baud rate option.
+
+ -- Rafael Diniz <rafael@riseup.net>  Wed, 29 Apr 2026 20:32:41 +0100
+
 mercury-qt (0.2.1) unstable; urgency=medium
 
   * Allow setting host and port via the GUI.
