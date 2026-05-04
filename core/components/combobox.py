@@ -16,6 +16,7 @@ class ComboBox(QtWidgets.QWidget):
         self.combo_box.currentIndexChanged.connect(self._on_index_changed)
         
         layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.combo_box)
         self.setLayout(layout)
 
