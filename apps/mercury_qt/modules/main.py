@@ -46,8 +46,14 @@ class Main(QtWidgets.QWidget):
     def _build_radio_status_group(self) -> QtWidgets.QGroupBox:
         return self.connection_info.handle_connection_info({"message": "Waiting for data..."})
        
-    def _build_controls_group(self) -> QtWidgets.QGroupBox:
-        return self.app_controls_view
+    def _build_controls_group(self) -> QtWidgets.QScrollArea:
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(
+            QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        scroll.setWidget(self.app_controls_view)
+        return scroll
         
     def start_ws_service(self):
         """Create and start the WebSocket client to the Mercury C backend."""
