@@ -1,4 +1,12 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
+
+
+class _NoScrollComboBox(QtWidgets.QComboBox):
+    """QComboBox that ignores mouse-wheel events to prevent accidental value changes."""
+
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+        event.ignore()
+
 
 class ComboBox(QtWidgets.QWidget):
     # Signal that emits the formatted command dictionary
@@ -10,7 +18,7 @@ class ComboBox(QtWidgets.QWidget):
         # Key used to format the command (e.g. "capture_dev" or "radio")
         self.key = key 
         
-        self.combo_box = QtWidgets.QComboBox()
+        self.combo_box = _NoScrollComboBox()
         
         # Connect the native QComboBox signal to the internal slot
         self.combo_box.currentIndexChanged.connect(self._on_index_changed)
