@@ -1,5 +1,5 @@
 from PySide6 import QtWidgets, QtCore, QtGui
-from core.components.combobox import ComboBox
+from core.components.combobox import ComboBox, _NoScrollComboBox
 
 class RadioControls(QtWidgets.QWidget):
     """Componente que agrega os controles de Soundcard e Radio."""
@@ -34,7 +34,7 @@ class RadioControls(QtWidgets.QWidget):
             "/dev/ttyUSB0 or 127.0.0.1:4532")
 
         # Baud Rate ComboBox (fixed options, no auto-emit needed)
-        self.baud_rate_control = QtWidgets.QComboBox()
+        self.baud_rate_control = _NoScrollComboBox()
         self.baud_rate_control.addItem("Auto", "0")
         self.baud_rate_control.addItem("4800", "4800")
         self.baud_rate_control.addItem("9600", "9600")
