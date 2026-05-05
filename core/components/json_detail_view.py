@@ -174,6 +174,14 @@ class JsonDetailView(QtWidgets.QWidget):
                 is_connected = str(initial_value).lower() == "true"
                 sync_status_flag.set_status(is_connected)
             return sync_status_flag        
+        elif key == "snr":
+            # Show SNR with units when present
+            if initial_value is None:
+                display = "N/A"
+            else:
+                display = f"{initial_value} dB"
+            label = QtWidgets.QLabel(display)
+            return label
         else:
             # Default to QLabel for all other fields
             display = str(initial_value).upper() if key in UPPERCASE_VALUES and initial_value is not None else \
@@ -198,8 +206,11 @@ class JsonDetailView(QtWidgets.QWidget):
                 
         else:
             if isinstance(widget, QtWidgets.QLabel):
-                display = str(value).upper() if key in UPPERCASE_VALUES and value is not None else \
-                          (str(value) if value is not None else "N/A")
+                if key == "snr":
+                    display = f"{value} dB" if value is not None else "N/A"
+                else:
+                    display = str(value).upper() if key in UPPERCASE_VALUES and value is not None else \
+                              (str(value) if value is not None else "N/A")
                 widget.setText(display)
             else:
                 print(f"Warning: Cannot update unknown widget type {type(widget)} for key '{key}'")
