@@ -168,8 +168,11 @@ cmd=(
     --mercury-dir "${mercury_dir}"
     --wine-prefix "${wine_prefix}"
     --wine-python "${wine_python}"
-    "${forwarded_args[@]}"
 )
+
+if [[ ${#forwarded_args[@]} -gt 0 ]]; then
+    cmd+=(-- "${forwarded_args[@]}")
+fi
 
 printf 'Command:'
 printf ' %q' "${cmd[@]}"

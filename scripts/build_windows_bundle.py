@@ -468,6 +468,38 @@ def normalize_wine_nuitka_args(forwarded_args: list[str]) -> list[str]:
     return normalized
 
 
+def prepare_wine_bundle_workspace(
+    bundle_dir: Path,
+    source_stem: str,
+    app_title: str,
+    *,
+    forwarded_args: list[str],
+    dry_run: bool,
+) -> None:
+    if dry_run:
+        return
+
+    stale_paths: list[Path] = [bundle_dir / f"{source_stem}.build"]
+    if "--force" in forwarded_args or "--remove-output" in forwarded_args:
+        stale_paths.extend(
+            [
+                bundle_dir / f"{source_stem}.dist",
+                bundle_dir / f"{source_stem}.exe",
+                bundle_dir / f"{app_title}.dist",
+                bundle_dir / f"{app_title}.exe",
+            ]
+        )
+
+    for stale_path in stale_paths:
+        if not stale_path.exists():
+            continue
+        print(f"Removing stale bundle artifact: {stale_path}")
+        if stale_path.is_dir():
+            shutil.rmtree(stale_path)
+        else:
+            stale_path.unlink()
+
+
 def build_wine_nuitka_command(
     *,
     entry_file: Path,
@@ -752,6 +784,14 @@ def main():
 
     deploy_status = 0
     if not args.skip_deploy:
+        if wine_python is not None:
+            prepare_wine_bundle_workspace(
+                bundle_dir,
+                entry_file.stem,
+                args.app_title,
+                forwarded_args=forwarded_args,
+                dry_run=args.dry_run,
+            )
         deploy_status = run_command(
             deploy_command,
             cwd=repo_root,
