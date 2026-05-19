@@ -264,7 +264,46 @@ def find_host_mingw_include_dir() -> Path:
     )
 
 
-def ensure_wine_nuitka_mingw_headers(
+def find_host_mingw_lib_dir() -> Path:
+    candidate = Path("/usr/x86_64-w64-mingw32/lib")
+    required_libs = (
+        "libkernel32.a",
+        "libmsvcrt.a",
+        "libuser32.a",
+        "libadvapi32.a",
+        "libshell32.a",
+        "libmingw32.a",
+        "libmingwex.a",
+        "libpthread.a",
+    )
+    if candidate.exists() and all((candidate / lib_name).exists() for lib_name in required_libs):
+        return candidate
+
+    raise FileNotFoundError(
+        "Unable to locate MinGW-w64 Windows import libraries on the host system. "
+        "Install the x86_64 MinGW development packages."
+    )
+
+
+def replace_path_with_host_tree(target_path: Path, host_path: Path, label: str) -> None:
+    if target_path.exists() or target_path.is_symlink():
+        if target_path.is_dir() and not target_path.is_symlink():
+            shutil.rmtree(target_path)
+        else:
+            target_path.unlink()
+
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        target_path.symlink_to(host_path)
+        action = "Linked"
+    except OSError:
+        shutil.copytree(host_path, target_path, dirs_exist_ok=True)
+        action = "Copied"
+
+    print(f"{action} host MinGW {label} into Wine Nuitka cache: {target_path} -> {host_path}")
+
+
+def ensure_wine_nuitka_mingw_sysroot(
     wine_python: Path,
     wine_prefix: Path | None,
     *,
@@ -298,6 +337,7 @@ def ensure_wine_nuitka_mingw_headers(
         )
 
     host_include_dir = find_host_mingw_include_dir()
+    host_lib_dir = find_host_mingw_lib_dir()
     cache_root = wine_prefix.resolve() / "drive_c" / "users"
     gcc_roots = sorted(
         cache_root.glob("*/AppData/Local/Nuitka/Nuitka/Cache/downloads/gcc/*/*/mingw64")
@@ -307,27 +347,12 @@ def ensure_wine_nuitka_mingw_headers(
 
     for gcc_root in gcc_roots:
         target_include_dir = gcc_root / "x86_64-w64-mingw32" / "include"
-        if (target_include_dir / "windows.h").exists():
-            continue
+        if not (target_include_dir / "windows.h").exists():
+            replace_path_with_host_tree(target_include_dir, host_include_dir, "headers")
 
-        if target_include_dir.exists() or target_include_dir.is_symlink():
-            if target_include_dir.is_dir() and not target_include_dir.is_symlink():
-                shutil.rmtree(target_include_dir)
-            else:
-                target_include_dir.unlink()
-
-        target_include_dir.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            target_include_dir.symlink_to(host_include_dir)
-            action = "Linked"
-        except OSError:
-            shutil.copytree(host_include_dir, target_include_dir, dirs_exist_ok=True)
-            action = "Copied"
-
-        print(
-            f"{action} host MinGW headers into Wine Nuitka cache: "
-            f"{target_include_dir} -> {host_include_dir}"
-        )
+        target_lib_dir = gcc_root / "x86_64-w64-mingw32" / "lib"
+        if not (target_lib_dir / "libkernel32.a").exists():
+            replace_path_with_host_tree(target_lib_dir, host_lib_dir, "import libraries")
 
 
 def infer_wine_deploy(wine_python: Path) -> Path:
@@ -820,7 +845,7 @@ def main():
                 wine_prefix,
                 dry_run=args.dry_run,
             )
-            ensure_wine_nuitka_mingw_headers(
+            ensure_wine_nuitka_mingw_sysroot(
                 wine_python,
                 wine_prefix,
                 dry_run=args.dry_run,
