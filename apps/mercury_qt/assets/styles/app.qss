@@ -210,3 +210,26 @@ QToolTip {
     border-radius: 4px;
     padding: 6px 8px;
 }
+
+/* ===== Sliders (TX gain) ===== */
+QSlider::groove:horizontal {
+    border: 1px solid rgb(70, 70, 70);
+    height: 6px;
+    background: rgb(45, 45, 45);
+    border-radius: 3px;
+}
+QSlider::sub-page:horizontal {
+    background: rgb(255, 136, 0);
+    border-radius: 3px;
+}
+QSlider::handle:horizontal {
+    background: rgb(255, 136, 0);
+    border: none;
+    width: 14px;
+    height: 14px;
+    margin: -4px 0;
+    border-radius: 7px;
+}
+QSlider::handle:horizontal:hover {
+    background: rgb(255, 160, 51);
+}

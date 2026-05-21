@@ -5,6 +5,12 @@ from apps.mercury_qt.modules.controls.controls import RadioControls
 
 from core.connection.websocket.client import WebSocketClient
 
+
+# Fields that are consumed internally by the UI and must never be forwarded
+# to ConnectionInfo.  Add new internal-only status keys here.
+_INTERNAL_STATUS_FIELDS = frozenset({"waterfall", "tx_gain_db", "tx_peak_dbfs"})
+
+
 class Main(QtWidgets.QWidget):
     """Main application widget for Mercury QT Client."""
 
@@ -148,8 +154,19 @@ class Main(QtWidgets.QWidget):
             self._waterfall_on = data.get("waterfall", True)
             self.waterfall_display.setVisible(self._waterfall_on)
 
-        # Strip the internal meta-field before passing to widgets
-        status = {k: v for k, v in data.items() if k != "waterfall"}
+        # Strip all internal UI-only fields before passing to widgets
+        status = {k: v for k, v in data.items()
+                  if k not in _INTERNAL_STATUS_FIELDS}
+
+        # TX gain slider — sync only when the user is not dragging
+        tx_gain_db = data.get("tx_gain_db")
+        if tx_gain_db is not None:
+            self.app_controls_view.update_tx_gain_from_backend(float(tx_gain_db))
+
+        # TX peak meter
+        tx_peak_dbfs = data.get("tx_peak_dbfs")
+        if tx_peak_dbfs is not None:
+            self.app_controls_view.update_tx_meter(float(tx_peak_dbfs))
 
         if self._waterfall_on:
             # SNR and sync belong to the waterfall overlay only
@@ -169,8 +186,9 @@ class Main(QtWidgets.QWidget):
         reset_data['client_tcp_connected'] = False
         reset_data['user_callsign'] = ''
         reset_data['dest_callsign'] = ''
-        # Strip internal meta-field
-        reset_data.pop('waterfall', None)
+        # Strip all internal UI-only fields (same set as in _handle_status_data)
+        for _f in _INTERNAL_STATUS_FIELDS:
+            reset_data.pop(_f, None)
         if self._waterfall_on:
             # Reset waterfall SNR/sync overlay
             self.waterfall_display.handle_status({'snr': 0.0, 'sync': False})
@@ -210,6 +228,8 @@ class Main(QtWidgets.QWidget):
         self.app_controls_view.audio_config_command.connect(self._send_json_command)
         # Radio model + device path are sent together via the combined Apply button
         self.app_controls_view.radio_config_command.connect(self._send_json_command)
+        # TX gain slider release → set_tx_gain command
+        self.app_controls_view.tx_gain_command.connect(self._send_json_command)
         # Host/port Connect button
         self.app_controls_view.connect_requested.connect(self._on_connect_requested)
 
