@@ -203,6 +203,15 @@ if [[ "${nuitka_dist_dir}" != "${bundle_runtime_dir}" ]]; then
 fi
 
 mercury_version="$(grep 'define VERSION__' "${mercury_dir_abs}/main.c" | head -1 | sed 's/.*"\(.*\)".*/\1/')"
+
+# Include mercury.ini.example from the mercury source directory
+mercury_ini_example="${mercury_dir_abs}/mercury.ini.example"
+if [[ -f "${mercury_ini_example}" ]]; then
+    cp "${mercury_ini_example}" "${bundle_runtime_dir}/mercury.ini.example"
+else
+    echo "Warning: mercury.ini.example not found at ${mercury_ini_example}" >&2
+fi
+
 archive_name="${app_title}-${qt_version}-mercury-${mercury_version}.zip"
 archive_path="${bundle_dir_abs}/${archive_name}"
 
