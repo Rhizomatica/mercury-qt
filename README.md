@@ -41,7 +41,7 @@ on failure, falls back to **WS**, alternating schemes on every failed attempt un
 ### From source (development)
 
 ```bash
-git clone https://github.com/Rhizomatica/mercury.git
+git clone https://github.com/Rhizomatica/mercury-qt.git
 cd mercury/mercury-qt
 
 python3 -m venv env
