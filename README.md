@@ -29,6 +29,8 @@ on failure, falls back to **WS**, alternating schemes on every failed attempt un
 ## Prerequisites
 
 * **Python 3.8+**
+* **64-bit OS / Python environment required** - PySide6 is only supported on
+  64-bit systems.
 * **pip**
 * A running **Mercury** backend exposing its WebSocket server (port `10000` by
   default). Build Mercury from the parent repository or install the `mercury`
