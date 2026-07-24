@@ -42,7 +42,7 @@ on failure, falls back to **WS**, alternating schemes on every failed attempt un
 
 ```bash
 git clone https://github.com/Rhizomatica/mercury-qt.git
-cd mercury/mercury-qt
+cd mercury-qt
 
 python3 -m venv env
 source env/bin/activate      # Windows: .\env\Scripts\activate
