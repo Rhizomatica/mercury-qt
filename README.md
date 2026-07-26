@@ -82,6 +82,7 @@ mercury -G -T
 Then launch the GUI:
 
 ```bash
+cd mercury-qt/
 python3 app.py mercury [--host HOST] [--port PORT]
 ```
 
