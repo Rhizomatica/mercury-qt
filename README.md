@@ -259,6 +259,6 @@ bash scripts/build_linux_bundle.sh --mode standalone -- --verbose
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see
-[LICENSE](../LICENSE) for details.
+[LICENSE](LICENSE) for details.
 
 Copyright (C) 2025-2026 [Rhizomatica](https://www.rhizomatica.org/)
