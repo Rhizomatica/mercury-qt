@@ -21,7 +21,8 @@ Depends:
  python3-pyside6.qtcore,
  python3-pyside6.qtgui,
  python3-pyside6.qtnetwork,
- python3-pyside6.qtwidgets
+ python3-pyside6.qtwidgets,
+ python3-pyside6.qtwebsockets
 Description: Qt GUI for interacting with Mercury over UDP
  mercury-qt provides a PySide6 desktop client for monitoring and controlling
  Mercury over UDP.
