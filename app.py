@@ -4,8 +4,7 @@ import apps.mercury_qt.app as mercury_qt
 import core.test_class as test_class
 
 
-if __name__ == "__main__":
-
+def main():
     if len(sys.argv) < 2:
         print('Missing param app')
         sys.exit(1)
@@ -24,3 +23,7 @@ if __name__ == "__main__":
     else:
         tests = test_class.TestClass("HERMES")
         tests.start_mercury_qt_app()
+
+
+if __name__ == "__main__":
+    main()
