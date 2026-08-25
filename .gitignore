@@ -2,3 +2,9 @@
 /__pycache__
 /modules/__pycache__
 *.pyc
+
+# Python build artifacts
+/build/
+/dist/
+*.egg-info/
+*.whl
