@@ -21,7 +21,7 @@ from __future__ import annotations
 import numpy as np
 from typing import List, Optional
 from PySide6 import QtWidgets
-from PySide6.QtCore import Qt, QTimer, Signal, Slot, QPointF
+from PySide6.QtCore import Qt, QTimer, Signal, Slot, QPointF, QRect
 from PySide6.QtGui import (
     QPainter, QColor, QLinearGradient, QImage, QPen, QFont,
     QBrush, QFontMetrics, QPainterPath
@@ -357,12 +357,20 @@ class WaterfallWidget(QtWidgets.QWidget):
             wf_h = 10
 
         # ---- Waterfall image ----
-        if (
+        wf_region = QRect(0, wf_y, w, wf_h)
+        waterfall_needs_redraw = (
             self._wf_image is None
-            or self._dirty
             or self._wf_image.width() != w
             or self._wf_image.height() != wf_h
-        ):
+        )
+        # Only consume `_dirty` when the waterfall area is actually being
+        # repainted. A partial repaint (e.g. the SNR strip invalidated by
+        # set_snr/set_sync) must NOT clear it, otherwise the pending spectrum
+        # line would be rendered into the cached image but never drawn to
+        # screen, leaving the waterfall stale until the next push_spectrum.
+        if self._dirty and event.rect().intersects(wf_region):
+            waterfall_needs_redraw = True
+        if waterfall_needs_redraw:
             self._wf_image = self._render_waterfall_image_fast(w, wf_h)
             self._dirty = False
         p.drawImage(0, wf_y, self._wf_image)
