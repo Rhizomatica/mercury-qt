@@ -50,7 +50,7 @@ class JsonDetailView(QtWidgets.QWidget):
     @QtCore.Slot(dict)
     def update_json_data(self, data: dict):
         current_label_keys = set(self.labels.keys())
-        incoming_data_keys = set(data.keys())
+        incoming_data_keys = set(self._rendered_keys(data))
 
         should_recreate = False
         if not current_label_keys:
@@ -72,7 +72,27 @@ class JsonDetailView(QtWidgets.QWidget):
             self._create_fields(data)
         
         self._update_field_values(data)
-        
+
+    def _rendered_keys(self, data: dict) -> list:
+        """Return the keys that will actually be rendered for *data*.
+
+        Must match the filtering applied in :meth:`_create_fields` so that
+        ``update_json_data`` can detect whether the displayed field set has
+        changed without being fooled by keys such as ``type`` (which is always
+        present on status messages but never rendered).
+        """
+        ordered_keys = [k for k in FIELD_ORDER if k in data] + \
+                       [k for k in data.keys() if k not in FIELD_ORDER and k not in FIELD_EXCLUDE]
+
+        rendered: list = []
+        for key in ordered_keys:
+            if key in FIELD_EXCLUDE:
+                continue
+            if key == "message" and "type" not in data:
+                continue
+            rendered.append(key)
+        return rendered
+
     def _create_fields(self, data: dict):
         while self.layout.count() > 2: # Items after title and separator
             item = self.layout.takeAt(self.layout.count() - 1) # Take from end for safety
@@ -87,15 +107,7 @@ class JsonDetailView(QtWidgets.QWidget):
         # Keys already rendered as part of a paired row — skip on individual pass
         paired_rendered: set = set()
 
-        # Use FIELD_ORDER for controlled ordering; append unknown keys at the end.
-        ordered_keys = [k for k in FIELD_ORDER if k in data] + \
-                       [k for k in data.keys() if k not in FIELD_ORDER and k not in FIELD_EXCLUDE]
-
-        for key in ordered_keys:
-            if key in FIELD_EXCLUDE:
-                continue
-            if key == "message" and "type" not in data:
-                continue
+        for key in self._rendered_keys(data):
             if key in paired_rendered:
                 continue
 

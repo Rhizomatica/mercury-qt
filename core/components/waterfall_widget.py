@@ -187,10 +187,18 @@ class WaterfallWidget(QtWidgets.QWidget):
         self._dirty = True
 
     def set_snr(self, snr: float):
+        if snr == self._snr:
+            return
         self._snr = snr
+        # Only the SNR strip needs repainting for this change.
+        self.update(0, 0, self.width(), self.SNR_BAR_HEIGHT)
 
     def set_sync(self, sync: bool):
+        if sync == self._sync:
+            return
         self._sync = sync
+        # Only the SNR strip needs repainting for this change.
+        self.update(0, 0, self.width(), self.SNR_BAR_HEIGHT)
 
     def set_ofdm_band(self, low_hz: float, high_hz: float):
         self.OFDM_LOW_HZ = low_hz
@@ -318,9 +326,21 @@ class WaterfallWidget(QtWidgets.QWidget):
     # ------------------------------------------------------------------
 
     def _on_tick(self):
-        if self._dirty:
-            self._wf_image = None  # invalidate cache
+        if not self._dirty:
+            return
         self.update()
+
+    def showEvent(self, event):  # noqa: N802
+        # Resume the refresh timer only while the widget is actually visible.
+        if not self._timer.isActive():
+            self._timer.start()
+        super().showEvent(event)
+
+    def hideEvent(self, event):  # noqa: N802
+        # Stop redrawing while hidden — avoids a 20 fps idle repaint loop when
+        # the waterfall is disabled (backend started with -W).
+        self._timer.stop()
+        super().hideEvent(event)
 
     def paintEvent(self, event):  # noqa: N802
         p = QPainter(self)
